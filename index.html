@@ -125,6 +125,8 @@
   .stat-label{ font-size:12px; color:var(--text-faint); margin-bottom:9px; display:flex; align-items:center; gap:6px; }
   .stat-value{ font-size:24px; font-weight:800; font-family:var(--display); letter-spacing:.2px; }
   .stat-value small{ font-size:12px; font-weight:500; color:var(--text-dim); font-family:var(--sans); }
+  .stat-value-iqd{ font-size:12.5px; color:var(--text-faint); font-family:var(--mono); margin-top:4px; }
+  .stat-value-iqd small{ font-family:var(--sans); }
 
   .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:19px 21px; box-shadow:var(--shadow-card); }
   .card + .card{ margin-top:16px; }
@@ -523,8 +525,8 @@
           <form id="pos-form" style="display:none; margin-top:16px;">
             <div class="divider-trace"></div>
             <div class="field-row">
-              <div class="field"><label>سعر البيع الفعلي</label><input required type="number" min="0" id="pos-price"></div>
-              <div class="field"><label>الخصم</label><input type="number" min="0" id="pos-discount" value="0"></div>
+              <div class="field"><label>سعر البيع الفعلي ($)</label><input required type="number" min="0" id="pos-price"></div>
+              <div class="field"><label>الخصم ($)</label><input type="number" min="0" id="pos-discount" value="0"></div>
             </div>
             <div class="field-row">
               <div class="field"><label>طريقة الدفع</label>
@@ -616,7 +618,7 @@
               </select>
             </div>
             <div class="field"><label>الوصف (اختياري)</label><input id="ex-desc" placeholder="..."></div>
-            <div class="field"><label>المبلغ</label><input required type="number" min="0" id="ex-amount"></div>
+            <div class="field"><label>المبلغ ($)</label><input required type="number" min="0" id="ex-amount"></div>
             <button type="submit" class="btn block secondary">تسجيل المصروف</button>
           </form>
           <div class="divider-trace"></div>
@@ -640,13 +642,9 @@
           <div class="card-head"><div class="card-title">بيانات المحل</div></div>
           <form id="settings-form">
             <div class="field"><label>اسم المحل</label><input id="set-shop-name" placeholder="علي فون"></div>
-            <div class="field"><label>رمز العملة</label>
-              <select id="set-currency">
-                <option value="$">دولار ($)</option>
-                <option value="د.ع">دينار عراقي (د.ع)</option>
-                <option value="﷼">ريال (﷼)</option>
-                <option value="AED">درهم (AED)</option>
-              </select>
+            <div class="field"><label>سعر الصرف (1$ = كم دينار؟)</label>
+              <input type="number" min="0" id="set-rate" placeholder="1310">
+              <div class="hint">كل الأسعار بالموقع تنعرض بالدولار والدينار مع بعض حسب هذا السعر.</div>
             </div>
             <div class="divider-trace"></div>
             <div class="field">
@@ -708,7 +706,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_hfKk7aue2LRJWuJ45llucg_iP8uYuDE';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let nextId = { model:1, unit:1, sale:1, expense:1 };
-let state = { settings:{ shopName:'علي فون', currency:'$', pin:'1234' }, models:[], units:[], sales:[], expenses:[] };
+let state = { settings:{ shopName:'علي فون', exchangeRate:1310, pin:'1234' }, models:[], units:[], sales:[], expenses:[] };
 
 function setSyncStatus(connected){
   const dot = document.getElementById('sync-dot');
@@ -736,8 +734,8 @@ async function loadState(){
     if(error) throw error;
     setSyncStatus(true);
     if(!data || !data.data || !data.data.state) return false;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pin:'1234' } }, data.data.state);
-    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pin:'1234' }, state.settings);
+    state = Object.assign({ settings:{ shopName:'علي فون', exchangeRate:1310, pin:'1234' } }, data.data.state);
+    state.settings = Object.assign({ shopName:'علي فون', exchangeRate:1310, pin:'1234' }, state.settings);
     nextId = data.data.nextId || nextId;
     return true;
   }catch(e){
@@ -751,8 +749,8 @@ async function pullRemoteChanges(){
   try{
     const { data, error } = await sb.from('app_state').select('data, updated_at').eq('id',1).single();
     if(error || !data || !data.data || !data.data.state) return;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pin:'1234' } }, data.data.state);
-    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pin:'1234' }, state.settings);
+    state = Object.assign({ settings:{ shopName:'علي فون', exchangeRate:1310, pin:'1234' } }, data.data.state);
+    state.settings = Object.assign({ shopName:'علي فون', exchangeRate:1310, pin:'1234' }, state.settings);
     nextId = data.data.nextId || nextId;
     setSyncStatus(true);
     applyShopNameToUi();
@@ -767,7 +765,19 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pullRem
    أدوات مساعدة
    ============================================================ */
 function fmt(n){ return Number(n||0).toLocaleString('en-US'); }
-function CUR(){ return state.settings.currency || '$'; }
+function rate(){ return Number(state.settings.exchangeRate) || 1310; }
+function toIQD(usd){ return Math.round(Number(usd||0) * rate()); }
+function fmtDual(usd){ return `${fmt(usd)}$ · ${fmt(toIQD(usd))}د.ع`; }
+function statCardHtml(c){
+  const body = c.isMoney
+    ? `<div class="stat-value">${fmt(c.value)} <small>$</small></div>
+       <div class="stat-value-iqd">${fmt(toIQD(c.value))} <small>د.ع</small></div>`
+    : `<div class="stat-value">${c.value} <small>${c.unit}</small></div>`;
+  return `<div class="stat-card" style="--stat-color:${c.color}">
+      <div class="stat-label">${c.label}</div>
+      ${body}
+    </div>`;
+}
 function todayISO(){ return new Date().toISOString().slice(0,10); }
 function daysAgoISO(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); }
 
@@ -886,17 +896,12 @@ function renderDashboard(){
   const availableCount = availableUnits().length;
 
   const cards = [
-    { label:'مبيعات اليوم', value: fmt(todayRevenue), unit:CUR(), color:'var(--accent)' },
-    { label:'مبيعات الشهر', value: fmt(monthRevenue), unit:CUR(), color:'var(--green)' },
-    { label:'صافي ربح الشهر', value: fmt(netProfit), unit:CUR(), color: netProfit>=0?'var(--green)':'var(--red)' },
+    { label:'مبيعات اليوم', value: todayRevenue, isMoney:true, color:'var(--accent)' },
+    { label:'مبيعات الشهر', value: monthRevenue, isMoney:true, color:'var(--green)' },
+    { label:'صافي ربح الشهر', value: netProfit, isMoney:true, color: netProfit>=0?'var(--green)':'var(--red)' },
     { label:'المخزون المتوفر', value: fmt(availableCount), unit:'جهاز', color:'var(--amber)' },
   ];
-  document.getElementById('stat-cards').innerHTML = cards.map(c=>`
-    <div class="stat-card" style="--stat-color:${c.color}">
-      <div class="stat-label">${c.label}</div>
-      <div class="stat-value">${c.value} <small>${c.unit}</small></div>
-    </div>
-  `).join('');
+  document.getElementById('stat-cards').innerHTML = cards.map(statCardHtml).join('');
 
   const days = [...Array(7)].map((_,i)=>daysAgoISO(6-i));
   const revenues = days.map(d=>dailySales(d).reduce((a,r)=>a+r.salePrice,0));
@@ -905,7 +910,7 @@ function renderDashboard(){
     const h = Math.max(4, Math.round((revenues[i]/max)*110));
     const label = new Date(d).toLocaleDateString('ar-IQ',{ weekday:'short' });
     return `<div class="chart-bar-wrap">
-      <div class="chart-bar" style="height:${h}px" title="${fmt(revenues[i])}${CUR()}"></div>
+      <div class="chart-bar" style="height:${h}px" title="${fmtDual(revenues[i])}"></div>
       <div class="chart-label">${label}</div>
     </div>`;
   }).join('');
@@ -929,8 +934,8 @@ function renderDashboard(){
     <tr>
       <td><span class="imei-chip">${r.invoiceNumber}</span></td>
       <td>${unitLabel(r.unit)}</td>
-      <td style="font-family:var(--mono)">${fmt(r.salePrice)}${CUR()}</td>
-      <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmt(r.salePrice-r.costPrice)}${CUR()}</td>
+      <td style="font-family:var(--mono)">${fmtDual(r.salePrice)}</td>
+      <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmtDual(r.salePrice-r.costPrice)}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
     </tr>`).join('') : `<tr><td colspan="5" class="empty">ماكو عمليات بيع بعد</td></tr>`;
 
@@ -970,8 +975,8 @@ function addDeviceFormHtml(existing){
         <input required id="f-imei" style="font-family:var(--mono)" placeholder="15 رقم" value="${existing?.imei||''}" ${existing?'readonly':''}>
       </div>
       <div class="field-row">
-        <div class="field"><label>سعر الشراء</label><input required type="number" min="0" id="f-purchase" placeholder="0" value="${existing?.purchasePrice??''}"></div>
-        <div class="field"><label>سعر البيع المقترح</label><input required type="number" min="0" id="f-sale" placeholder="0" value="${existing?.model?.defaultPrice??''}"></div>
+        <div class="field"><label>سعر الشراء ($)</label><input required type="number" min="0" id="f-purchase" placeholder="0" value="${existing?.purchasePrice??''}"></div>
+        <div class="field"><label>سعر البيع المقترح ($)</label><input required type="number" min="0" id="f-sale" placeholder="0" value="${existing?.model?.defaultPrice??''}"></div>
       </div>
       <div class="field"><label>المورد (اختياري)</label><input id="f-supplier" placeholder="اسم المورد" value="${existing?.supplier||''}"></div>
       <button type="submit" class="btn block">${existing?'حفظ التعديلات':'إضافة إلى المخزن'}</button>
@@ -1059,8 +1064,8 @@ function renderInventory(filter=''){
       <td><span class="imei-chip">${u.imei}</span></td>
       <td>${m.brand||''} ${m.model||''}<div style="color:var(--text-faint); font-size:11.5px;">${m.color||''} ${m.storage||''} · ${m.condition||''}</div></td>
       <td><span class="badge ${statusCls[u.status]||'ok'}"><span class="dot"></span>${u.status}</span></td>
-      <td style="font-family:var(--mono)">${fmt(u.purchasePrice)}${CUR()}</td>
-      <td style="font-family:var(--mono)">${fmt(m.defaultPrice)}${CUR()}</td>
+      <td style="font-family:var(--mono)">${fmtDual(u.purchasePrice)}</td>
+      <td style="font-family:var(--mono)">${fmtDual(m.defaultPrice)}</td>
       <td style="color:var(--text-faint); font-size:12px;">${u.purchaseDate}</td>
       <td>
         <div class="row-actions">
@@ -1131,7 +1136,7 @@ function posLookup(imei){
   preview.innerHTML = `<div class="device-preview">
     <div>
       <div class="name">${unitLabel(unit)}</div>
-      <div class="meta">IMEI: ${unit.imei} · سعر الشراء ${fmt(unit.purchasePrice)}${CUR()}</div>
+      <div class="meta">IMEI: ${unit.imei} · سعر الشراء ${fmtDual(unit.purchasePrice)}</div>
     </div>
     <span class="badge ok"><span class="dot"></span>متوفر</span>
   </div>`;
@@ -1147,7 +1152,7 @@ function renderPosDeviceGrid(){
     <div class="device-tile" data-pick="${u.imei}">
       <div class="t-name">${u.model.brand} ${u.model.model}</div>
       <div class="t-meta">${u.model.color||''} ${u.model.storage||''} · ${u.model.condition}</div>
-      <div class="t-price">${fmt(u.model.defaultPrice)}${CUR()}</div>
+      <div class="t-price">${fmtDual(u.model.defaultPrice)}</div>
     </div>
   `).join('') : `<div class="empty">لا توجد أجهزة متوفرة حاليا للبيع</div>`;
 }
@@ -1189,9 +1194,9 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
     <div class="receipt-row"><span>IMEI</span><span style="font-family:var(--mono)">${posSelectedUnit.imei}</span></div>
     <div class="receipt-row"><span>طريقة الدفع</span><span>${payment}</span></div>
     ${customer? `<div class="receipt-row"><span>الزبون</span><span>${customer}</span></div>` : ''}
-    <div class="receipt-row"><span>الخصم</span><span>${fmt(discount)}${CUR()}</span></div>
-    <div class="receipt-row total"><span>الإجمالي</span><span>${fmt(price-discount)}${CUR()}</span></div>
-    <div class="receipt-row" style="color:var(--green)"><span>الربح المحقق</span><span>${fmt(profit)}${CUR()}</span></div>
+    <div class="receipt-row"><span>الخصم</span><span>${fmtDual(discount)}</span></div>
+    <div class="receipt-row total"><span>الإجمالي</span><span>${fmtDual(price-discount)}</span></div>
+    <div class="receipt-row" style="color:var(--green)"><span>الربح المحقق</span><span>${fmtDual(profit)}</span></div>
   `;
 
   toast('تمت عملية البيع بنجاح ✓ الجهاز تحول لحالة "مباع"');
@@ -1218,8 +1223,8 @@ function renderSalesHistory(filter=''){
       <td>${unitLabel(r.unit)}</td>
       <td>${r.customer || '<span style="color:var(--text-faint)">—</span>'}</td>
       <td><span style="font-size:12px; color:var(--text-dim)">${r.payment}</span></td>
-      <td style="font-family:var(--mono)">${fmt(r.salePrice)}${CUR()}</td>
-      <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmt(r.salePrice-r.costPrice)}${CUR()}</td>
+      <td style="font-family:var(--mono)">${fmtDual(r.salePrice)}</td>
+      <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmtDual(r.salePrice-r.costPrice)}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
       <td><button class="icon-btn danger" title="إلغاء البيع (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></td>
     </tr>`).join('');
@@ -1254,17 +1259,12 @@ function renderReports(){
   const totalExpenses = state.expenses.reduce((a,e)=>a+e.amount,0);
   const totalNetProfit = totalGrossProfit - totalExpenses;
   const financeCards = [
-    { label:'رأس المال في المخزون الحالي', value: fmt(capitalInStock), unit:CUR(), color:'var(--amber)' },
-    { label:'إجمالي المبيعات (منذ البداية)', value: fmt(totalRevenue), unit:CUR(), color:'var(--accent)' },
-    { label:'إجمالي المصاريف (منذ البداية)', value: fmt(totalExpenses), unit:CUR(), color:'var(--red)' },
-    { label:'صافي الربح الكلي', value: fmt(totalNetProfit), unit:CUR(), color: totalNetProfit>=0?'var(--green)':'var(--red)' },
+    { label:'رأس المال في المخزون الحالي', value: capitalInStock, isMoney:true, color:'var(--amber)' },
+    { label:'إجمالي المبيعات (منذ البداية)', value: totalRevenue, isMoney:true, color:'var(--accent)' },
+    { label:'إجمالي المصاريف (منذ البداية)', value: totalExpenses, isMoney:true, color:'var(--red)' },
+    { label:'صافي الربح الكلي', value: totalNetProfit, isMoney:true, color: totalNetProfit>=0?'var(--green)':'var(--red)' },
   ];
-  document.getElementById('finance-stat-cards').innerHTML = financeCards.map(c=>`
-    <div class="stat-card" style="--stat-color:${c.color}">
-      <div class="stat-label">${c.label}</div>
-      <div class="stat-value">${c.value} <small>${c.unit}</small></div>
-    </div>
-  `).join('');
+  document.getElementById('finance-stat-cards').innerHTML = financeCards.map(statCardHtml).join('');
 
   const months = new Set();
   allSaleItemsFlat().forEach(r=>months.add(r.date.slice(0,7)));
@@ -1279,10 +1279,10 @@ function renderReports(){
     const net = grossProfit - exp;
     return `<tr>
       <td style="font-family:var(--mono)">${mo}</td>
-      <td style="font-family:var(--mono)">${fmt(revenue)}${CUR()}</td>
-      <td style="font-family:var(--mono)">${fmt(grossProfit)}${CUR()}</td>
-      <td style="font-family:var(--mono); color:var(--red)">${fmt(exp)}${CUR()}</td>
-      <td style="font-family:var(--mono); font-weight:700; color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}${CUR()}</td>
+      <td style="font-family:var(--mono)">${fmtDual(revenue)}</td>
+      <td style="font-family:var(--mono)">${fmtDual(grossProfit)}</td>
+      <td style="font-family:var(--mono); color:var(--red)">${fmtDual(exp)}</td>
+      <td style="font-family:var(--mono); font-weight:700; color:${net>=0?'var(--green)':'var(--red)'}">${fmtDual(net)}</td>
     </tr>`;
   }).join('') : `<tr><td colspan="5" class="empty">ماكو بيانات بعد</td></tr>`;
 
@@ -1293,7 +1293,7 @@ function renderReports(){
         <div style="font-size:13px; font-weight:600;">${ex.category}</div>
         <div style="font-size:11px; color:var(--text-faint);">${ex.description||''} · ${ex.date}</div>
       </div>
-      <span style="font-family:var(--mono); color:var(--red);">-${fmt(ex.amount)}${CUR()}</span>
+      <span style="font-family:var(--mono); color:var(--red);">-${fmtDual(ex.amount)}</span>
     </div>
   `).join('') : `<div class="empty" style="padding:20px 0;">لا توجد مصاريف مسجلة</div>`;
 }
@@ -1321,12 +1321,12 @@ function applyShopNameToUi(){
 }
 function renderSettings(){
   document.getElementById('set-shop-name').value = state.settings.shopName || '';
-  document.getElementById('set-currency').value = state.settings.currency || '$';
+  document.getElementById('set-rate').value = state.settings.exchangeRate || 1310;
 }
 document.getElementById('settings-form').addEventListener('submit', e=>{
   e.preventDefault();
   state.settings.shopName = document.getElementById('set-shop-name').value.trim() || 'علي فون';
-  state.settings.currency = document.getElementById('set-currency').value;
+  state.settings.exchangeRate = Number(document.getElementById('set-rate').value) || 1310;
   const newPin = document.getElementById('set-pin').value.trim();
   if(newPin){ state.settings.pin = newPin; document.getElementById('set-pin').value=''; }
   saveState();
@@ -1353,32 +1353,35 @@ document.getElementById('btn-export-month').addEventListener('click', ()=>{
 
   const lines = [];
   lines.push([`تقرير شهر ${month} · ${state.settings.shopName||''}`].map(csvEscape).join(','));
+  lines.push([`سعر الصرف المستخدم: 1$ = ${rate()} د.ع`].map(csvEscape).join(','));
   lines.push('');
   lines.push(['-- المبيعات --'].map(csvEscape).join(','));
-  lines.push(['رقم الفاتورة','الجهاز','الزبون','طريقة الدفع','سعر البيع','سعر التكلفة','الربح','التاريخ'].map(csvEscape).join(','));
+  lines.push(['رقم الفاتورة','الجهاز','الزبون','طريقة الدفع','سعر البيع ($)','سعر البيع (د.ع)','سعر التكلفة ($)','الربح ($)','الربح (د.ع)','التاريخ'].map(csvEscape).join(','));
   if(sales.length){
     sales.forEach(r=>{
-      lines.push([r.invoiceNumber, unitLabel(r.unit), r.customer||'', r.payment, r.salePrice, r.costPrice, (r.salePrice-r.costPrice), r.date].map(csvEscape).join(','));
+      const profit = r.salePrice-r.costPrice;
+      lines.push([r.invoiceNumber, unitLabel(r.unit), r.customer||'', r.payment, r.salePrice, toIQD(r.salePrice), r.costPrice, profit, toIQD(profit), r.date].map(csvEscape).join(','));
     });
   } else {
     lines.push(['لا توجد مبيعات هذا الشهر'].map(csvEscape).join(','));
   }
   lines.push('');
   lines.push(['-- المصاريف --'].map(csvEscape).join(','));
-  lines.push(['البند','الوصف','المبلغ','التاريخ'].map(csvEscape).join(','));
+  lines.push(['البند','الوصف','المبلغ ($)','المبلغ (د.ع)','التاريخ'].map(csvEscape).join(','));
   if(expenses.length){
     expenses.forEach(e=>{
-      lines.push([e.category, e.description||'', e.amount, e.date].map(csvEscape).join(','));
+      lines.push([e.category, e.description||'', e.amount, toIQD(e.amount), e.date].map(csvEscape).join(','));
     });
   } else {
     lines.push(['لا توجد مصاريف هذا الشهر'].map(csvEscape).join(','));
   }
   lines.push('');
   lines.push(['-- الملخص --'].map(csvEscape).join(','));
-  lines.push(['إجمالي المبيعات', revenue].map(csvEscape).join(','));
-  lines.push(['مجمل الربح', grossProfit].map(csvEscape).join(','));
-  lines.push(['إجمالي المصاريف', expenseTotal].map(csvEscape).join(','));
-  lines.push(['صافي الربح', netProfit].map(csvEscape).join(','));
+  lines.push(['البند','($)','(د.ع)'].map(csvEscape).join(','));
+  lines.push(['إجمالي المبيعات', revenue, toIQD(revenue)].map(csvEscape).join(','));
+  lines.push(['مجمل الربح', grossProfit, toIQD(grossProfit)].map(csvEscape).join(','));
+  lines.push(['إجمالي المصاريف', expenseTotal, toIQD(expenseTotal)].map(csvEscape).join(','));
+  lines.push(['صافي الربح', netProfit, toIQD(netProfit)].map(csvEscape).join(','));
 
   const csvContent = '\uFEFF' + lines.join('\r\n');
   const blob = new Blob([csvContent], { type:'text/csv;charset=utf-8;' });
@@ -1428,7 +1431,7 @@ document.getElementById('btn-import').addEventListener('change', e=>{
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', ()=>{
-    state = { settings:{ shopName: state.settings.shopName, currency: state.settings.currency, pin: state.settings.pin }, models:[], units:[], sales:[], expenses:[] };
+    state = { settings:{ shopName: state.settings.shopName, exchangeRate: state.settings.exchangeRate, pin: state.settings.pin }, models:[], units:[], sales:[], expenses:[] };
     nextId = { model:1, unit:1, sale:1, expense:1 };
     saveState();
     applyShopNameToUi();
