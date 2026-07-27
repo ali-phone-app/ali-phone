@@ -291,6 +291,9 @@
     body{ font-size:14px; }
     .app{ flex-direction:column; }
 
+    /* يمنع تكبير الشاشة التلقائي بالآيفون (سفاري) عند لمس أي حقل كتابة */
+    input, select, textarea{ font-size:16px !important; }
+
     .mobile-topbar{
       display:flex; align-items:center; justify-content:space-between; gap:10px;
       padding:14px 16px; border-bottom:1px solid var(--border); background:var(--surface);
@@ -503,11 +506,7 @@
           <option value="مباع">مباع</option>
         </select>
       </div>
-      <div class="chip-row" id="inv-platform-filter" style="margin-bottom:12px;">
-        <button type="button" class="chip-opt selected" data-platform="">الكل</button>
-        <button type="button" class="chip-opt" data-platform="Apple">🍎 Apple</button>
-        <button type="button" class="chip-opt" data-platform="Android">🤖 Android</button>
-      </div>
+      <div class="chip-row" id="inv-platform-filter" style="margin-bottom:12px;"></div>
       <div class="page-sub" id="inv-platform-counts" style="margin:-4px 0 12px;"></div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div class="table-wrap">
@@ -1130,22 +1129,35 @@ function openEditDeviceModal(unitId){
 }
 document.getElementById('open-add-device').addEventListener('click', openAddDeviceModal);
 
-let invPlatformFilter = '';
+let invBrandFilter = '';
 function renderInventory(filter=''){
   const statusFilter = document.getElementById('inv-status-filter').value;
+
+  const availableUnitsAll = state.units.filter(u=>u.status!=='مباع');
+  const brandCounts = {};
+  availableUnitsAll.forEach(u=>{
+    const m = state.models.find(x=>x.id===u.modelId);
+    if(!m) return;
+    brandCounts[m.brand] = (brandCounts[m.brand]||0) + 1;
+  });
+  const brandList = Object.keys(brandCounts).sort((a,b)=> brandCounts[b]-brandCounts[a]);
+  const brandIcon = b => b==='Apple' ? '🍎 ' : '🤖 ';
+  document.getElementById('inv-platform-filter').innerHTML = `
+    <button type="button" class="chip-opt ${!invBrandFilter?'selected':''}" data-brand="">الكل</button>
+    ${brandList.map(b=>`<button type="button" class="chip-opt ${invBrandFilter===b?'selected':''}" data-brand="${b}">${brandIcon(b)}${b}</button>`).join('')}
+  `;
+  document.getElementById('inv-platform-counts').textContent = brandList.length
+    ? 'بالمخزون حاليا: ' + brandList.map(b=>`${brandIcon(b)}${b} ${brandCounts[b]}`).join(' · ')
+    : 'المخزون فاضي حاليا';
+
   const rows = state.units.filter(u=>{
     const m = state.models.find(x=>x.id===u.modelId) || {};
     const hay = (u.imei+' '+(m.brand||'')+' '+(m.model||'')).toLowerCase();
     const matchesText = hay.includes(filter.toLowerCase());
     const matchesStatus = !statusFilter || u.status===statusFilter;
-    const matchesPlatform = !invPlatformFilter || platformOf(m.brand)===invPlatformFilter;
-    return matchesText && matchesStatus && matchesPlatform;
+    const matchesBrand = !invBrandFilter || m.brand===invBrandFilter;
+    return matchesText && matchesStatus && matchesBrand;
   }).sort((a,b)=> b.purchaseDate.localeCompare(a.purchaseDate));
-
-  const availableUnitsAll = state.units.filter(u=>u.status!=='مباع');
-  const appleCount = availableUnitsAll.filter(u=>{ const m=state.models.find(x=>x.id===u.modelId); return m && platformOf(m.brand)==='Apple'; }).length;
-  const androidCount = availableUnitsAll.filter(u=>{ const m=state.models.find(x=>x.id===u.modelId); return m && platformOf(m.brand)==='Android'; }).length;
-  document.getElementById('inv-platform-counts').textContent = `بالمخزون حاليا: 🍎 ${appleCount} آيفون · 🤖 ${androidCount} أندرويد`;
 
   document.getElementById('inventory-empty').style.display = rows.length? 'none':'block';
   const statusCls = { 'متوفر':'ok', 'مباع':'sold', 'محجوز':'hold' };
@@ -1172,9 +1184,8 @@ function renderInventory(filter=''){
 }
 
 document.getElementById('inv-platform-filter').addEventListener('click', e=>{
-  const b = e.target.closest('[data-platform]'); if(!b) return;
-  invPlatformFilter = b.dataset.platform;
-  document.querySelectorAll('#inv-platform-filter .chip-opt').forEach(c=>c.classList.toggle('selected', c===b));
+  const b = e.target.closest('[data-brand]'); if(!b) return;
+  invBrandFilter = b.dataset.brand;
   renderInventory(document.getElementById('inv-search').value);
 });
 
