@@ -835,9 +835,13 @@ function openModal(title, html){
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-content').innerHTML = html;
   document.getElementById('modal-overlay').classList.add('show');
+  history.pushState({modal:true, page: history.state?.page || 'dashboard'}, '');
 }
-function closeModal(){ document.getElementById('modal-overlay').classList.remove('show'); }
-document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+function closeModal(fromPopState){
+  document.getElementById('modal-overlay').classList.remove('show');
+  if(!fromPopState && history.state?.modal) history.back();
+}
+document.getElementById('modal-close-btn').addEventListener('click', ()=>closeModal());
 document.getElementById('modal-overlay').addEventListener('click', e=>{ if(e.target.id==='modal-overlay') closeModal(); });
 
 function confirmAction(message, onYes){
@@ -855,11 +859,18 @@ function confirmAction(message, onYes){
 /* ============================================================
    التنقل بين الصفحات
    ============================================================ */
-function goToPage(pageName){
+function goToPage(pageName, fromPopState){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.page===pageName));
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id==='page-'+pageName));
   renderAll(pageName);
   window.scrollTo({top:0});
+  if(!fromPopState){
+    if(history.state?.page===pageName){
+      history.replaceState({page:pageName}, '');
+    } else {
+      history.pushState({page:pageName}, '');
+    }
+  }
 }
 document.querySelectorAll('.nav-btn').forEach(btn=>{
   btn.addEventListener('click', ()=> goToPage(btn.dataset.page));
@@ -867,6 +878,19 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 document.addEventListener('click', e=>{
   const t = e.target.closest('[data-nav]');
   if(t) goToPage(t.dataset.nav);
+});
+history.replaceState({page:'dashboard'}, '');
+window.addEventListener('popstate', e=>{
+  if(document.getElementById('scanner-overlay').style.display==='flex'){
+    closeBarcodeScanner(true);
+    return;
+  }
+  if(document.getElementById('modal-overlay').classList.contains('show')){
+    closeModal(true);
+    return;
+  }
+  const page = e.state?.page || 'dashboard';
+  goToPage(page, true);
 });
 
 function renderAll(pageName){
@@ -953,6 +977,7 @@ function renderDashboard(){
 let scannerInstance = null;
 function openBarcodeScanner(onResult){
   document.getElementById('scanner-overlay').style.display = 'flex';
+  history.pushState({scanner:true, page: history.state?.page || 'dashboard'}, '');
   scannerInstance = new Html5Qrcode('scanner-reader');
   scannerInstance.start(
     { facingMode: 'environment' },
@@ -968,14 +993,15 @@ function openBarcodeScanner(onResult){
     closeBarcodeScanner();
   });
 }
-function closeBarcodeScanner(){
+function closeBarcodeScanner(fromPopState){
   document.getElementById('scanner-overlay').style.display = 'none';
   if(scannerInstance){
     scannerInstance.stop().then(()=>scannerInstance.clear()).catch(()=>{});
     scannerInstance = null;
   }
+  if(!fromPopState && history.state?.scanner) history.back();
 }
-document.getElementById('scanner-close').addEventListener('click', closeBarcodeScanner);
+document.getElementById('scanner-close').addEventListener('click', ()=>closeBarcodeScanner());
 
 /* ============================================================
    المخزون
@@ -1028,8 +1054,9 @@ function addDeviceFormHtml(existing){
       </div>
       <div class="field-row">
         <div class="field"><label>سعر الشراء</label><input required type="number" min="0" id="f-purchase" placeholder="0" value="${existing?.purchasePrice??''}"></div>
-        <div class="field"><label>سعر البيع المقترح (اختياري)</label><input type="number" min="0" id="f-sale" placeholder="0" value="${existing?.model?.defaultPrice??''}"></div>
+        <div class="field"><label>تاريخ الشراء</label><input required type="date" id="f-purchase-date" value="${existing?.purchaseDate || todayISO()}"></div>
       </div>
+      <div class="field"><label>سعر البيع المقترح (اختياري)</label><input type="number" min="0" id="f-sale" placeholder="0" value="${existing?.model?.defaultPrice??''}"></div>
       <div class="field"><label>المورد (اختياري)</label><input id="f-supplier" placeholder="اسم المورد" value="${existing?.supplier||''}"></div>
       <div class="field"><label>ملاحظة (اختياري)</label><textarea id="f-note" rows="2" placeholder="مثلا: فيها خدش بالشاشة، أو مشكلة بالبطارية...">${existing?.note||''}</textarea></div>
       <button type="submit" class="btn block">${existing?'حفظ التعديلات':'إضافة إلى المخزن'}</button>
@@ -1092,6 +1119,7 @@ function wireDeviceForm(existingUnitId){
     const color = document.getElementById('f-color').value.trim();
     const storage = document.getElementById('f-storage').value.trim();
     const purchase = Number(document.getElementById('f-purchase').value);
+    const purchaseDate = document.getElementById('f-purchase-date').value || todayISO();
     const salePrice = Number(document.getElementById('f-sale').value) || 0;
     const batteryVal = document.getElementById('f-battery').value;
     const batteryHealth = batteryVal!=='' ? Number(batteryVal) : null;
@@ -1104,6 +1132,7 @@ function wireDeviceForm(existingUnitId){
       m.defaultPrice = salePrice;
       unit.modelId = m.id;
       unit.purchasePrice = purchase;
+      unit.purchaseDate = purchaseDate;
       unit.batteryHealth = batteryHealth;
       unit.supplier = supplier;
       unit.note = note;
@@ -1111,7 +1140,7 @@ function wireDeviceForm(existingUnitId){
     } else {
       const m = findOrCreateModel(brand, model, color, storage, selectedCondition, salePrice);
       m.defaultPrice = salePrice;
-      state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate: todayISO(), supplier, note, status:'متوفر' });
+      state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate, supplier, note, status:'متوفر' });
       toast('تمت إضافة الجهاز إلى المخزن ✓');
     }
     saveState();
