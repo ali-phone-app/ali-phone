@@ -503,7 +503,6 @@
           <option value="">كل الحالات</option>
           <option value="متوفر">متوفر</option>
           <option value="محجوز">محجوز</option>
-          <option value="مباع">مباع</option>
         </select>
       </div>
       <div class="chip-row" id="inv-platform-filter" style="margin-bottom:12px;"></div>
@@ -594,7 +593,7 @@
       <div class="card" style="padding:0; overflow:hidden;">
         <div class="table-wrap">
         <table>
-          <thead><tr><th>الفاتورة</th><th>الجهاز</th><th>الزبون</th><th>الدفع</th><th>السعر</th><th>الربح</th><th>التاريخ</th><th></th></tr></thead>
+          <thead><tr><th>الفاتورة</th><th>الجهاز</th><th>الزبون</th><th>الدفع</th><th>سعر الشراء</th><th>سعر البيع</th><th>الربح</th><th>تاريخ الشراء</th><th>تاريخ البيع</th><th></th></tr></thead>
           <tbody id="sales-body"></tbody>
         </table>
         </div>
@@ -800,12 +799,14 @@ function unitLabel(unit){
   if(!m) return 'جهاز محذوف';
   return `${m.brand} ${m.model} · ${m.color||''} ${m.storage||''} · ${m.condition}`;
 }
+function saleItemLabel(it){
+  return `${it.brand||''} ${it.model||''} · ${it.color||''} ${it.storage||''} · ${it.condition||''}`;
+}
 function allSaleItemsFlat(){
   const rows = [];
   state.sales.forEach(s=>{
     s.items.forEach(it=>{
-      const u = state.units.find(x=>x.id===it.unitId);
-      rows.push({ ...it, saleId:s.id, invoiceNumber:s.invoiceNumber, date:s.date, customer:s.customer, payment:s.payment, unit:u });
+      rows.push({ ...it, saleId:s.id, invoiceNumber:s.invoiceNumber, date: it.saleDate || s.date, customer:s.customer, payment:s.payment });
     });
   });
   return rows;
@@ -937,7 +938,7 @@ function renderDashboard(){
   document.getElementById('recent-sales-body').innerHTML = recent.length ? recent.map(r=>`
     <tr>
       <td><span class="imei-chip">${r.invoiceNumber}</span></td>
-      <td>${unitLabel(r.unit)}</td>
+      <td>${saleItemLabel(r)}</td>
       <td style="font-family:var(--mono)">${fmt(r.salePrice)}${CUR()}</td>
       <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmt(r.salePrice-r.costPrice)}${CUR()}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
@@ -1030,6 +1031,7 @@ function addDeviceFormHtml(existing){
         <div class="field"><label>سعر البيع المقترح (اختياري)</label><input type="number" min="0" id="f-sale" placeholder="0" value="${existing?.model?.defaultPrice??''}"></div>
       </div>
       <div class="field"><label>المورد (اختياري)</label><input id="f-supplier" placeholder="اسم المورد" value="${existing?.supplier||''}"></div>
+      <div class="field"><label>ملاحظة (اختياري)</label><textarea id="f-note" rows="2" placeholder="مثلا: فيها خدش بالشاشة، أو مشكلة بالبطارية...">${existing?.note||''}</textarea></div>
       <button type="submit" class="btn block">${existing?'حفظ التعديلات':'إضافة إلى المخزن'}</button>
     </form>
   `;
@@ -1094,6 +1096,7 @@ function wireDeviceForm(existingUnitId){
     const batteryVal = document.getElementById('f-battery').value;
     const batteryHealth = batteryVal!=='' ? Number(batteryVal) : null;
     const supplier = document.getElementById('f-supplier').value.trim() || 'غير محدد';
+    const note = document.getElementById('f-note').value.trim();
 
     if(existingUnitId){
       const unit = state.units.find(u=>u.id===existingUnitId);
@@ -1103,11 +1106,12 @@ function wireDeviceForm(existingUnitId){
       unit.purchasePrice = purchase;
       unit.batteryHealth = batteryHealth;
       unit.supplier = supplier;
+      unit.note = note;
       toast('تم تحديث بيانات الجهاز ✓');
     } else {
       const m = findOrCreateModel(brand, model, color, storage, selectedCondition, salePrice);
       m.defaultPrice = salePrice;
-      state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate: todayISO(), supplier, status:'متوفر' });
+      state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate: todayISO(), supplier, note, status:'متوفر' });
       toast('تمت إضافة الجهاز إلى المخزن ✓');
     }
     saveState();
@@ -1166,7 +1170,7 @@ function renderInventory(filter=''){
     return `
     <tr>
       <td><span class="imei-chip">${u.imei}</span></td>
-      <td>${m.brand||''} ${m.model||''}<div style="color:var(--text-faint); font-size:11.5px;">${m.color||''} ${m.storage||''} · ${m.condition||''}${u.batteryHealth!=null? ' · 🔋 '+u.batteryHealth+'%' : ''}</div></td>
+      <td>${m.brand||''} ${m.model||''}<div style="color:var(--text-faint); font-size:11.5px;">${m.color||''} ${m.storage||''} · ${m.condition||''}${u.batteryHealth!=null? ' · 🔋 '+u.batteryHealth+'%' : ''}</div>${u.note? `<div style="color:var(--amber); font-size:11px; margin-top:2px;">⚠️ ${u.note}</div>` : ''}</td>
       <td><span class="badge ${statusCls[u.status]||'ok'}"><span class="dot"></span>${u.status}</span></td>
       <td style="font-family:var(--mono)">${fmt(u.purchasePrice)}${CUR()}</td>
       <td style="font-family:var(--mono)">${m.defaultPrice? fmt(m.defaultPrice)+CUR() : '—'}</td>
@@ -1234,7 +1238,12 @@ function posLookup(imei){
   if(!imei){ preview.innerHTML=''; form.style.display='none'; posSelectedUnit=null; return; }
 
   if(!unit){
-    preview.innerHTML = `<div class="device-preview" style="border-color:var(--red)"><div class="name" style="color:var(--red)">ماكو جهاز بهذا الـ IMEI</div></div>`;
+    const soldBefore = allSaleItemsFlat().find(it=>it.imei===imei);
+    if(soldBefore){
+      preview.innerHTML = `<div class="device-preview" style="border-color:var(--red)"><div><div class="name" style="color:var(--red)">هذا الجهاز مباع مسبقا</div><div class="meta">فاتورة ${soldBefore.invoiceNumber} بتاريخ ${soldBefore.date}</div></div></div>`;
+    } else {
+      preview.innerHTML = `<div class="device-preview" style="border-color:var(--red)"><div class="name" style="color:var(--red)">ماكو جهاز بهذا الـ IMEI</div></div>`;
+    }
     form.style.display='none'; posSelectedUnit=null; return;
   }
   if(unit.status!=='متوفر'){
@@ -1291,16 +1300,30 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
   const discount = Number(document.getElementById('pos-discount').value)||0;
   const payment = document.getElementById('pos-payment').value;
   const customer = document.getElementById('pos-customer').value.trim();
+  const m = state.models.find(x=>x.id===posSelectedUnit.modelId) || {};
 
-  posSelectedUnit.status = 'مباع';
   const sale = {
     id: nextId.sale++,
     invoiceNumber: 'INV-'+String(nextId.sale-1).padStart(4,'0'),
     date: todayISO(),
-    items:[{ unitId: posSelectedUnit.id, salePrice: price-discount, costPrice: posSelectedUnit.purchasePrice }],
+    items:[{
+      unitId: posSelectedUnit.id,
+      modelId: posSelectedUnit.modelId,
+      imei: posSelectedUnit.imei,
+      brand: m.brand||'', model: m.model||'', color: m.color||'', storage: m.storage||'', condition: m.condition||'',
+      batteryHealth: posSelectedUnit.batteryHealth ?? null,
+      note: posSelectedUnit.note || '',
+      supplier: posSelectedUnit.supplier || '',
+      purchaseDate: posSelectedUnit.purchaseDate,
+      saleDate: todayISO(),
+      salePrice: price-discount,
+      costPrice: posSelectedUnit.purchasePrice
+    }],
     discount, customer, payment
   };
   state.sales.push(sale);
+  /* الجهاز ينحذف من المخزون فعليا وينتقل بكل تفاصيله لسجل المبيعات */
+  state.units = state.units.filter(u=>u.id!==posSelectedUnit.id);
   saveState();
 
   const profit = (price-discount) - posSelectedUnit.purchasePrice;
@@ -1316,10 +1339,12 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
     <div class="receipt-row" style="color:var(--green)"><span>الربح المحقق</span><span>${fmt(profit)}${CUR()}</span></div>
   `;
 
-  toast('تمت عملية البيع بنجاح ✓ الجهاز تحول لحالة "مباع"');
+  toast('تمت عملية البيع بنجاح ✓ الجهاز انتقل لسجل المبيعات');
   document.getElementById('pos-imei').value='';
+  posSelectedUnit = null;
   posLookup('');
   renderPosDeviceGrid();
+  renderInventory(document.getElementById('inv-search').value);
   renderDashboard();
 });
 
@@ -1329,7 +1354,7 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
 function renderSalesHistory(filter=''){
   const f = filter.toLowerCase();
   const rows = allSaleItemsFlat().filter(r=>{
-    const hay = (r.invoiceNumber+' '+(r.customer||'')+' '+unitLabel(r.unit)).toLowerCase();
+    const hay = (r.invoiceNumber+' '+(r.customer||'')+' '+saleItemLabel(r)+' '+(r.imei||'')).toLowerCase();
     return hay.includes(f);
   }).sort((a,b)=> b.date.localeCompare(a.date) || b.saleId-a.saleId);
 
@@ -1337,11 +1362,13 @@ function renderSalesHistory(filter=''){
   document.getElementById('sales-body').innerHTML = rows.map(r=>`
     <tr>
       <td><span class="imei-chip">${r.invoiceNumber}</span></td>
-      <td>${unitLabel(r.unit)}</td>
+      <td>${saleItemLabel(r)}<div style="color:var(--text-faint); font-size:11px; font-family:var(--mono)">${r.imei||''}</div>${r.note? `<div style="color:var(--amber); font-size:11px;">⚠️ ${r.note}</div>` : ''}</td>
       <td>${r.customer || '<span style="color:var(--text-faint)">—</span>'}</td>
       <td><span style="font-size:12px; color:var(--text-dim)">${r.payment}</span></td>
+      <td style="font-family:var(--mono)">${fmt(r.costPrice)}${CUR()}</td>
       <td style="font-family:var(--mono)">${fmt(r.salePrice)}${CUR()}</td>
       <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmt(r.salePrice-r.costPrice)}${CUR()}</td>
+      <td style="color:var(--text-faint); font-size:12px;">${r.purchaseDate||'—'}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
       <td><button class="icon-btn danger" title="إلغاء البيع (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></td>
     </tr>`).join('');
@@ -1354,12 +1381,22 @@ document.getElementById('sales-body').addEventListener('click', e=>{
   const sale = state.sales.find(s=>s.id===saleId);
   confirmAction(`هل تريد إلغاء الفاتورة <strong>${sale.invoiceNumber}</strong> وإرجاع الجهاز للمخزون؟`, ()=>{
     sale.items.forEach(it=>{
-      const u = state.units.find(x=>x.id===it.unitId);
-      if(u) u.status='متوفر';
+      if(state.units.some(u=>u.imei===it.imei)){
+        toast('تعذر الإرجاع — يوجد جهاز آخر بنفس الـ IMEI بالمخزون حاليا', true);
+        return;
+      }
+      let m = state.models.find(x=>x.id===it.modelId);
+      if(!m) m = findOrCreateModel(it.brand, it.model, it.color, it.storage, it.condition, 0);
+      state.units.push({
+        id: nextId.unit++, modelId:m.id, imei:it.imei, purchasePrice:it.costPrice,
+        batteryHealth: it.batteryHealth ?? null, note: it.note||'', supplier: it.supplier||'غير محدد',
+        purchaseDate: it.purchaseDate || todayISO(), status:'متوفر'
+      });
     });
     state.sales = state.sales.filter(s=>s.id!==saleId);
     saveState();
     renderSalesHistory(document.getElementById('sales-search').value);
+    renderInventory(document.getElementById('inv-search').value);
     renderDashboard();
     toast('تم إلغاء البيع وإرجاع الجهاز للمخزون');
   });
@@ -1474,10 +1511,10 @@ document.getElementById('btn-export-month').addEventListener('click', ()=>{
   lines.push([`تقرير شهر ${month} · ${state.settings.shopName||''}`].map(csvEscape).join(','));
   lines.push('');
   lines.push(['-- المبيعات --'].map(csvEscape).join(','));
-  lines.push(['رقم الفاتورة','الجهاز','الزبون','طريقة الدفع','سعر البيع','سعر التكلفة','الربح','التاريخ'].map(csvEscape).join(','));
+  lines.push(['رقم الفاتورة','الجهاز','IMEI','الزبون','طريقة الدفع','سعر الشراء','سعر البيع','الربح','تاريخ الشراء','تاريخ البيع'].map(csvEscape).join(','));
   if(sales.length){
     sales.forEach(r=>{
-      lines.push([r.invoiceNumber, unitLabel(r.unit), r.customer||'', r.payment, r.salePrice, r.costPrice, (r.salePrice-r.costPrice), r.date].map(csvEscape).join(','));
+      lines.push([r.invoiceNumber, saleItemLabel(r), r.imei||'', r.customer||'', r.payment, r.costPrice, r.salePrice, (r.salePrice-r.costPrice), r.purchaseDate||'', r.date].map(csvEscape).join(','));
     });
   } else {
     lines.push(['لا توجد مبيعات هذا الشهر'].map(csvEscape).join(','));
