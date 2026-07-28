@@ -380,6 +380,23 @@
   .scanner-head button{ background:none; border:none; color:var(--text-dim); font-size:20px; cursor:pointer; line-height:1; }
   #scanner-reader{ width:100%; min-height:260px; background:#000; }
   .scanner-hint{ padding:12px 16px; font-size:12px; color:var(--text-faint); text-align:center; }
+
+  /* ===== شاشة القفل ===== */
+  .lock-overlay{
+    position:fixed; inset:0; z-index:500; background:var(--bg); background-image:var(--bg-glow);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .lock-box{ width:100%; max-width:320px; text-align:center; }
+  .lock-icon{ font-size:34px; margin-bottom:10px; }
+  .lock-title{ font-family:var(--display); font-weight:800; font-size:19px; margin-bottom:4px; }
+  .lock-sub{ color:var(--text-faint); font-size:13px; margin-bottom:20px; }
+  .lock-box input{
+    width:100%; text-align:center; letter-spacing:6px; font-size:20px; font-family:var(--mono);
+    padding:13px 14px; border-radius:var(--radius); border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); margin-bottom:12px;
+  }
+  .lock-box input:focus{ outline:2px solid var(--accent-strong); outline-offset:1px; }
+  .lock-error{ color:var(--red); font-size:12.5px; margin:-4px 0 12px; }
 </style>
 </head>
 <body>
@@ -499,6 +516,9 @@
 
       <div class="search-bar">
         <input type="text" id="inv-search" placeholder="ابحث بالـ IMEI أو الماركة أو الموديل...">
+        <button type="button" class="btn secondary" id="scan-inv-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
+        </button>
         <select id="inv-status-filter" style="max-width:150px;">
           <option value="">كل الحالات</option>
           <option value="متوفر">متوفر</option>
@@ -563,6 +583,7 @@
           <div class="card-head" style="margin-bottom:10px;">
             <div class="card-title">أو اختر من الأجهزة المتوفرة <span>(<span id="pos-available-count">0</span> جهاز)</span></div>
           </div>
+          <div class="chip-row" id="pos-platform-filter" style="margin-bottom:10px;"></div>
           <div class="device-grid" id="pos-device-grid"></div>
         </div>
 
@@ -588,7 +609,10 @@
         </div>
       </div>
       <div class="search-bar">
-        <input type="text" id="sales-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز...">
+        <input type="text" id="sales-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز أو IMEI...">
+        <button type="button" class="btn secondary" id="scan-sales-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
+        </button>
       </div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div class="table-wrap">
@@ -668,6 +692,26 @@
         </div>
 
         <div class="card">
+          <div class="card-head"><div class="card-title">شركات هواتف الأندرويد <span>تظهر كخيارات سريعة عند إضافة جهاز</span></div></div>
+          <div class="chip-row" id="brand-manage-list"></div>
+          <form id="brand-add-form" style="display:flex; gap:8px;">
+            <input id="new-brand-name" placeholder="اسم شركة جديدة" style="flex:1;">
+            <button type="submit" class="btn secondary">إضافة</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="card-title">قفل التطبيق</div></div>
+          <p class="hint" style="margin-bottom:14px;">ضع رمز دخول (٤ أرقام فأكثر) حتى ما يفتح أحد التطبيق غيرك. اتركه فاضي وأحفظ للإلغاء.</p>
+          <form id="pin-form">
+            <div class="field"><label>رمز الدخول الجديد</label><input type="password" inputmode="numeric" pattern="[0-9]*" id="set-pin" placeholder="مثلا 1234" autocomplete="off"></div>
+            <div class="field"><label>تأكيد الرمز</label><input type="password" inputmode="numeric" pattern="[0-9]*" id="set-pin-confirm" placeholder="أعد كتابة الرمز" autocomplete="off"></div>
+            <button type="submit" class="btn secondary block" id="btn-save-pin">حفظ رمز الدخول</button>
+          </form>
+          <div class="page-sub" id="pin-status" style="margin-top:10px;"></div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><div class="card-title">تحميل تقرير شهري</div></div>
           <p class="hint" style="margin-bottom:14px;">اختر الشهر وحمّل كشف كامل بالمبيعات والمصاريف والصافي — يفتح مباشرة بإكسل.</p>
           <div class="field"><label>الشهر</label><input type="month" id="export-month"></div>
@@ -695,6 +739,19 @@
   </main>
 </div>
 
+<div class="lock-overlay" id="lock-overlay">
+  <div class="lock-box">
+    <div class="lock-icon" id="lock-icon">⏳</div>
+    <div class="lock-title" id="lock-shop-name">جاري التحميل...</div>
+    <div class="lock-sub" id="lock-sub" style="display:none;">أدخل رمز الدخول للمتابعة</div>
+    <form id="lock-form" style="display:none;">
+      <input type="password" inputmode="numeric" pattern="[0-9]*" id="lock-pin-input" placeholder="••••" autocomplete="off">
+      <div class="lock-error" id="lock-error" style="display:none;">رمز غير صحيح</div>
+      <button type="submit" class="btn block">دخول</button>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span class="dot"></span><span id="toast-text"></span></div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -717,8 +774,11 @@ const SUPABASE_URL = 'https://juxtmgjcjpxzzezlrjkk.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_hfKk7aue2LRJWuJ45llucg_iP8uYuDE';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const DEFAULT_ANDROID_BRANDS = ['Samsung','Xiaomi','Huawei','Honor','Oppo','Vivo','Infinix','Tecno','Realme','OnePlus','Motorola','Nokia','Google','Itel','Lenovo','ZTE','Asus','Sony','LG','Gionee'];
+function androidBrands(){ return (state.settings.androidBrands && state.settings.androidBrands.length) ? state.settings.androidBrands : DEFAULT_ANDROID_BRANDS; }
+
 let nextId = { model:1, unit:1, sale:1, expense:1 };
-let state = { settings:{ shopName:'علي فون', currency:'$' }, models:[], units:[], sales:[], expenses:[] };
+let state = { settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, models:[], units:[], sales:[], expenses:[] };
 
 function setSyncStatus(connected){
   const dot = document.getElementById('sync-dot');
@@ -746,7 +806,8 @@ async function loadState(){
     if(error) throw error;
     setSyncStatus(true);
     if(!data || !data.data || !data.data.state) return false;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$' } }, data.data.state);
+    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() } }, data.data.state);
+    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, state.settings);
     nextId = data.data.nextId || nextId;
     return true;
   }catch(e){
@@ -760,7 +821,8 @@ async function pullRemoteChanges(){
   try{
     const { data, error } = await sb.from('app_state').select('data, updated_at').eq('id',1).single();
     if(error || !data || !data.data || !data.data.state) return;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$' } }, data.data.state);
+    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() } }, data.data.state);
+    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, state.settings);
     nextId = data.data.nextId || nextId;
     setSyncStatus(true);
     applyShopNameToUi();
@@ -881,6 +943,10 @@ document.addEventListener('click', e=>{
 });
 history.replaceState({page:'dashboard'}, '');
 window.addEventListener('popstate', e=>{
+  if(scannerClosingViaHistory){
+    scannerClosingViaHistory = false;
+    return;
+  }
   if(document.getElementById('scanner-overlay').style.display==='flex'){
     closeBarcodeScanner(true);
     return;
@@ -975,6 +1041,7 @@ function renderDashboard(){
    قارئ الباركود بالكاميرا
    ============================================================ */
 let scannerInstance = null;
+let scannerClosingViaHistory = false;
 function openBarcodeScanner(onResult){
   document.getElementById('scanner-overlay').style.display = 'flex';
   history.pushState({scanner:true, page: history.state?.page || 'dashboard'}, '');
@@ -999,14 +1066,16 @@ function closeBarcodeScanner(fromPopState){
     scannerInstance.stop().then(()=>scannerInstance.clear()).catch(()=>{});
     scannerInstance = null;
   }
-  if(!fromPopState && history.state?.scanner) history.back();
+  if(!fromPopState && history.state?.scanner){
+    scannerClosingViaHistory = true;
+    history.back();
+  }
 }
 document.getElementById('scanner-close').addEventListener('click', ()=>closeBarcodeScanner());
 
 /* ============================================================
    المخزون
    ============================================================ */
-const ANDROID_BRAND_CHIPS = ['Samsung','Xiaomi','Huawei','Oppo','Infinix','Nokia'];
 const CONDITION_OPTS = ['جديد','مستعمل'];
 function platformOf(brand){ return brand==='Apple' ? 'Apple' : 'Android'; }
 
@@ -1025,7 +1094,7 @@ function addDeviceFormHtml(existing){
       <div class="field" id="android-brand-field" style="display:${platform==='Android'?'block':'none'};">
         <label>الشركة المصنعة</label>
         <div class="chip-row" id="brand-chips">
-          ${ANDROID_BRAND_CHIPS.map(b=>`<button type="button" class="chip-opt ${b===brand?'selected':''}" data-brand="${b}">${b}</button>`).join('')}
+          ${androidBrands().map(b=>`<button type="button" class="chip-opt ${b===brand?'selected':''}" data-brand="${b}">${b}</button>`).join('')}
         </div>
         <input id="f-brand" placeholder="اسم الشركة" value="${platform==='Android'?brand:''}">
       </div>
@@ -1223,6 +1292,12 @@ document.getElementById('inv-platform-filter').addEventListener('click', e=>{
 });
 
 document.getElementById('inv-search').addEventListener('input', e=> renderInventory(e.target.value));
+document.getElementById('scan-inv-search-btn').addEventListener('click', ()=>{
+  openBarcodeScanner((code)=>{
+    document.getElementById('inv-search').value = code;
+    renderInventory(code);
+  });
+});
 document.getElementById('inv-status-filter').addEventListener('change', ()=> renderInventory(document.getElementById('inv-search').value));
 
 document.getElementById('inventory-body').addEventListener('click', e=>{
@@ -1293,8 +1368,20 @@ function posLookup(imei){
   document.getElementById('pos-discount').value = 0;
 }
 
+let posBrandFilter = '';
 function renderPosDeviceGrid(){
-  const units = availableUnits();
+  const allUnits = availableUnits();
+  const brandCounts = {};
+  allUnits.forEach(u=>{ brandCounts[u.model.brand] = (brandCounts[u.model.brand]||0) + 1; });
+  const brandList = Object.keys(brandCounts).sort((a,b)=> brandCounts[b]-brandCounts[a]);
+  if(posBrandFilter && !brandList.includes(posBrandFilter)) posBrandFilter = '';
+  const brandIcon = b => b==='Apple' ? '🍎 ' : '🤖 ';
+  document.getElementById('pos-platform-filter').innerHTML = brandList.length ? `
+    <button type="button" class="chip-opt ${!posBrandFilter?'selected':''}" data-brand="">الكل (${allUnits.length})</button>
+    ${brandList.map(b=>`<button type="button" class="chip-opt ${posBrandFilter===b?'selected':''}" data-brand="${b}">${brandIcon(b)}${b} (${brandCounts[b]})</button>`).join('')}
+  ` : '';
+
+  const units = posBrandFilter ? allUnits.filter(u=>u.model.brand===posBrandFilter) : allUnits;
   document.getElementById('pos-available-count').textContent = units.length;
   document.getElementById('pos-device-grid').innerHTML = units.length ? units.map(u=>`
     <div class="device-tile" data-pick="${u.imei}">
@@ -1304,6 +1391,11 @@ function renderPosDeviceGrid(){
     </div>
   `).join('') : `<div class="empty">لا توجد أجهزة متوفرة حاليا للبيع</div>`;
 }
+document.getElementById('pos-platform-filter').addEventListener('click', e=>{
+  const b = e.target.closest('[data-brand]'); if(!b) return;
+  posBrandFilter = b.dataset.brand;
+  renderPosDeviceGrid();
+});
 document.getElementById('pos-device-grid').addEventListener('click', e=>{
   const tile = e.target.closest('[data-pick]');
   if(!tile) return;
@@ -1403,6 +1495,12 @@ function renderSalesHistory(filter=''){
     </tr>`).join('');
 }
 document.getElementById('sales-search').addEventListener('input', e=> renderSalesHistory(e.target.value));
+document.getElementById('scan-sales-search-btn').addEventListener('click', ()=>{
+  openBarcodeScanner((code)=>{
+    document.getElementById('sales-search').value = code;
+    renderSalesHistory(code);
+  });
+});
 document.getElementById('sales-body').addEventListener('click', e=>{
   const btn = e.target.closest('[data-void]');
   if(!btn) return;
@@ -1509,7 +1607,44 @@ function applyShopNameToUi(){
 }
 function renderSettings(){
   document.getElementById('set-shop-name').value = state.settings.shopName || '';
+  document.getElementById('pin-status').textContent = state.settings.pinCode
+    ? 'قفل التطبيق مفعل حاليا 🔒'
+    : 'قفل التطبيق غير مفعل حاليا';
+  renderBrandManageList();
 }
+function renderBrandManageList(){
+  const list = document.getElementById('brand-manage-list');
+  const brands = androidBrands();
+  list.innerHTML = brands.length ? brands.map(b=>`
+    <span class="chip-opt selected" style="display:inline-flex; align-items:center; gap:7px;">
+      ${b}
+      <button type="button" class="brand-del-btn" data-brand="${b}" style="background:none; border:none; color:inherit; cursor:pointer; font-size:14px; line-height:1; padding:0;">×</button>
+    </span>
+  `).join('') : '<span class="page-sub">لا توجد شركات مضافة</span>';
+}
+document.getElementById('brand-manage-list').addEventListener('click', e=>{
+  const btn = e.target.closest('[data-brand]'); if(!btn) return;
+  const name = btn.dataset.brand;
+  confirmAction(`حذف شركة ${name} من القائمة؟`, ()=>{
+    state.settings.androidBrands = androidBrands().filter(b=>b!==name);
+    saveState();
+    renderBrandManageList();
+    toast('تم حذف الشركة ✓');
+  });
+});
+document.getElementById('brand-add-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const input = document.getElementById('new-brand-name');
+  const name = input.value.trim();
+  if(!name){ toast('اكتب اسم الشركة أولا', true); return; }
+  const brands = androidBrands();
+  if(brands.some(b=>b.toLowerCase()===name.toLowerCase())){ toast('هذه الشركة موجودة مسبقا', true); return; }
+  state.settings.androidBrands = [...brands, name];
+  saveState();
+  renderBrandManageList();
+  input.value = '';
+  toast('تمت إضافة الشركة ✓');
+});
 document.getElementById('settings-form').addEventListener('submit', e=>{
   e.preventDefault();
   state.settings.shopName = document.getElementById('set-shop-name').value.trim() || 'علي فون';
@@ -1518,6 +1653,33 @@ document.getElementById('settings-form').addEventListener('submit', e=>{
   applyShopNameToUi();
   renderDashboard();
   toast('تم حفظ الإعدادات ✓');
+});
+document.getElementById('pin-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const pin = document.getElementById('set-pin').value.trim();
+  const confirmPin = document.getElementById('set-pin-confirm').value.trim();
+  if(!pin){
+    state.settings.pinCode = '';
+    saveState();
+    sessionStorage.removeItem('appUnlocked');
+    renderSettings();
+    document.getElementById('pin-form').reset();
+    toast('تم إلغاء قفل التطبيق');
+    return;
+  }
+  if(pin.length < 4){
+    toast('الرمز لازم يكون ٤ أرقام على الأقل', true);
+    return;
+  }
+  if(pin !== confirmPin){
+    toast('الرمزين غير متطابقين', true);
+    return;
+  }
+  state.settings.pinCode = pin;
+  saveState();
+  renderSettings();
+  document.getElementById('pin-form').reset();
+  toast('تم حفظ رمز الدخول ✓');
 });
 
 function csvEscape(v){
@@ -1613,7 +1775,7 @@ document.getElementById('btn-import').addEventListener('change', e=>{
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', ()=>{
-    state = { settings:{ shopName: state.settings.shopName, currency: state.settings.currency }, models:[], units:[], sales:[], expenses:[] };
+    state = { settings:{ shopName: state.settings.shopName, currency: state.settings.currency, pinCode: state.settings.pinCode, androidBrands: state.settings.androidBrands }, models:[], units:[], sales:[], expenses:[] };
     nextId = { model:1, unit:1, sale:1, expense:1 };
     saveState();
     applyShopNameToUi();
@@ -1626,9 +1788,39 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
 /* ============================================================
    Init
    ============================================================ */
+function checkAppLock(){
+  const lockOverlay = document.getElementById('lock-overlay');
+  const pin = state.settings.pinCode;
+  if(!pin || sessionStorage.getItem('appUnlocked')==='1'){
+    lockOverlay.style.display = 'none';
+    return;
+  }
+  document.getElementById('lock-icon').textContent = '🔒';
+  document.getElementById('lock-shop-name').textContent = (state.settings.shopName || 'علي فون') + ' مقفل';
+  document.getElementById('lock-sub').style.display = 'block';
+  document.getElementById('lock-form').style.display = 'block';
+  lockOverlay.style.display = 'flex';
+  document.getElementById('lock-pin-input').value = '';
+  document.getElementById('lock-error').style.display = 'none';
+  setTimeout(()=> document.getElementById('lock-pin-input')?.focus(), 50);
+}
+document.getElementById('lock-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const entered = document.getElementById('lock-pin-input').value.trim();
+  if(entered && entered === state.settings.pinCode){
+    sessionStorage.setItem('appUnlocked','1');
+    document.getElementById('lock-overlay').style.display = 'none';
+  } else {
+    document.getElementById('lock-error').style.display = 'block';
+    document.getElementById('lock-pin-input').value = '';
+    document.getElementById('lock-pin-input').focus();
+  }
+});
+
 async function boot(){
   const hadSavedData = await loadState();
   if(!hadSavedData){ await saveState(); }
+  checkAppLock();
   applyShopNameToUi();
   renderDashboard();
   renderInventory();
