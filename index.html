@@ -526,6 +526,7 @@
         </select>
       </div>
       <div class="chip-row" id="inv-platform-filter" style="margin-bottom:12px;"></div>
+      <div class="chip-row" id="inv-brand-subfilter" style="margin-bottom:12px;"></div>
       <div class="page-sub" id="inv-platform-counts" style="margin:-4px 0 12px;"></div>
       <div class="card" style="padding:0; overflow:hidden;">
         <div class="table-wrap">
@@ -584,6 +585,7 @@
             <div class="card-title">أو اختر من الأجهزة المتوفرة <span>(<span id="pos-available-count">0</span> جهاز)</span></div>
           </div>
           <div class="chip-row" id="pos-platform-filter" style="margin-bottom:10px;"></div>
+          <div class="chip-row" id="pos-brand-subfilter" style="margin-bottom:10px;"></div>
           <div class="device-grid" id="pos-device-grid"></div>
         </div>
 
@@ -1096,7 +1098,7 @@ function addDeviceFormHtml(existing){
         <div class="chip-row" id="brand-chips">
           ${androidBrands().map(b=>`<button type="button" class="chip-opt ${b===brand?'selected':''}" data-brand="${b}">${b}</button>`).join('')}
         </div>
-        <input id="f-brand" placeholder="اسم الشركة" value="${platform==='Android'?brand:''}">
+        <input type="hidden" id="f-brand" value="${platform==='Android'?brand:''}">
       </div>
       <div class="field"><label>الموديل</label><input required id="f-model" placeholder="iPhone 14 Pro / Galaxy S23" value="${existing?.model?.model||''}"></div>
       <div class="field-row">
@@ -1181,7 +1183,7 @@ function wireDeviceForm(existingUnitId){
     }
     const brand = document.getElementById('f-brand').value.trim() || (platform==='Apple'?'Apple':'');
     if(platform==='Android' && !brand){
-      toast('اختر أو اكتب الشركة المصنعة', true);
+      toast('اختر الشركة المصنعة', true);
       return;
     }
     const model = document.getElementById('f-model').value.trim();
@@ -1232,24 +1234,35 @@ function openEditDeviceModal(unitId){
 document.getElementById('open-add-device').addEventListener('click', openAddDeviceModal);
 
 let invBrandFilter = '';
+let invBrandSubFilter = '';
 function renderInventory(filter=''){
   const statusFilter = document.getElementById('inv-status-filter').value;
 
   const availableUnitsAll = state.units.filter(u=>u.status!=='مباع');
-  const brandCounts = {};
+  const platformCounts = {};
+  const androidBrandCounts = {};
   availableUnitsAll.forEach(u=>{
     const m = state.models.find(x=>x.id===u.modelId);
     if(!m) return;
-    brandCounts[m.brand] = (brandCounts[m.brand]||0) + 1;
+    const p = platformOf(m.brand);
+    platformCounts[p] = (platformCounts[p]||0) + 1;
+    if(p==='Android') androidBrandCounts[m.brand] = (androidBrandCounts[m.brand]||0) + 1;
   });
-  const brandList = Object.keys(brandCounts).sort((a,b)=> brandCounts[b]-brandCounts[a]);
-  const brandIcon = b => b==='Apple' ? '🍎 ' : '🤖 ';
+  const platformList = Object.keys(platformCounts).sort((a,b)=> platformCounts[b]-platformCounts[a]);
+  const platformIcon = p => p==='Apple' ? '🍎 ' : '🤖 ';
   document.getElementById('inv-platform-filter').innerHTML = `
     <button type="button" class="chip-opt ${!invBrandFilter?'selected':''}" data-brand="">الكل</button>
-    ${brandList.map(b=>`<button type="button" class="chip-opt ${invBrandFilter===b?'selected':''}" data-brand="${b}">${brandIcon(b)}${b}</button>`).join('')}
+    ${platformList.map(p=>`<button type="button" class="chip-opt ${invBrandFilter===p?'selected':''}" data-brand="${p}">${platformIcon(p)}${p}</button>`).join('')}
   `;
-  document.getElementById('inv-platform-counts').textContent = brandList.length
-    ? 'بالمخزون حاليا: ' + brandList.map(b=>`${brandIcon(b)}${b} ${brandCounts[b]}`).join(' · ')
+  const androidBrandList = Object.keys(androidBrandCounts).sort((a,b)=> androidBrandCounts[b]-androidBrandCounts[a]);
+  if(invBrandFilter==='Android' && !androidBrandList.includes(invBrandSubFilter)) invBrandSubFilter = '';
+  document.getElementById('inv-brand-subfilter').style.display = invBrandFilter==='Android' ? 'flex' : 'none';
+  document.getElementById('inv-brand-subfilter').innerHTML = invBrandFilter==='Android' ? `
+    <button type="button" class="chip-opt ${!invBrandSubFilter?'selected':''}" data-subbrand="">كل الشركات</button>
+    ${androidBrandList.map(b=>`<button type="button" class="chip-opt ${invBrandSubFilter===b?'selected':''}" data-subbrand="${b}">${b} (${androidBrandCounts[b]})</button>`).join('')}
+  ` : '';
+  document.getElementById('inv-platform-counts').textContent = platformList.length
+    ? 'بالمخزون حاليا: ' + platformList.map(p=>`${platformIcon(p)}${p} ${platformCounts[p]}`).join(' · ')
     : 'المخزون فاضي حاليا';
 
   const rows = state.units.filter(u=>{
@@ -1257,8 +1270,9 @@ function renderInventory(filter=''){
     const hay = (u.imei+' '+(m.brand||'')+' '+(m.model||'')).toLowerCase();
     const matchesText = hay.includes(filter.toLowerCase());
     const matchesStatus = !statusFilter || u.status===statusFilter;
-    const matchesBrand = !invBrandFilter || m.brand===invBrandFilter;
-    return matchesText && matchesStatus && matchesBrand;
+    const matchesBrand = !invBrandFilter || platformOf(m.brand)===invBrandFilter;
+    const matchesSubBrand = !(invBrandFilter==='Android' && invBrandSubFilter) || m.brand===invBrandSubFilter;
+    return matchesText && matchesStatus && matchesBrand && matchesSubBrand;
   }).sort((a,b)=> b.purchaseDate.localeCompare(a.purchaseDate));
 
   document.getElementById('inventory-empty').style.display = rows.length? 'none':'block';
@@ -1288,6 +1302,12 @@ function renderInventory(filter=''){
 document.getElementById('inv-platform-filter').addEventListener('click', e=>{
   const b = e.target.closest('[data-brand]'); if(!b) return;
   invBrandFilter = b.dataset.brand;
+  invBrandSubFilter = '';
+  renderInventory(document.getElementById('inv-search').value);
+});
+document.getElementById('inv-brand-subfilter').addEventListener('click', e=>{
+  const b = e.target.closest('[data-subbrand]'); if(!b) return;
+  invBrandSubFilter = b.dataset.subbrand;
   renderInventory(document.getElementById('inv-search').value);
 });
 
@@ -1369,19 +1389,36 @@ function posLookup(imei){
 }
 
 let posBrandFilter = '';
+let posBrandSubFilter = '';
 function renderPosDeviceGrid(){
   const allUnits = availableUnits();
-  const brandCounts = {};
-  allUnits.forEach(u=>{ brandCounts[u.model.brand] = (brandCounts[u.model.brand]||0) + 1; });
-  const brandList = Object.keys(brandCounts).sort((a,b)=> brandCounts[b]-brandCounts[a]);
-  if(posBrandFilter && !brandList.includes(posBrandFilter)) posBrandFilter = '';
-  const brandIcon = b => b==='Apple' ? '🍎 ' : '🤖 ';
-  document.getElementById('pos-platform-filter').innerHTML = brandList.length ? `
+  const platformCounts = {};
+  const androidBrandCounts = {};
+  allUnits.forEach(u=>{
+    const p = platformOf(u.model.brand);
+    platformCounts[p] = (platformCounts[p]||0) + 1;
+    if(p==='Android') androidBrandCounts[u.model.brand] = (androidBrandCounts[u.model.brand]||0) + 1;
+  });
+  const platformList = Object.keys(platformCounts).sort((a,b)=> platformCounts[b]-platformCounts[a]);
+  if(posBrandFilter && !platformList.includes(posBrandFilter)) posBrandFilter = '';
+  const platformIcon = p => p==='Apple' ? '🍎 ' : '🤖 ';
+  document.getElementById('pos-platform-filter').innerHTML = platformList.length ? `
     <button type="button" class="chip-opt ${!posBrandFilter?'selected':''}" data-brand="">الكل (${allUnits.length})</button>
-    ${brandList.map(b=>`<button type="button" class="chip-opt ${posBrandFilter===b?'selected':''}" data-brand="${b}">${brandIcon(b)}${b} (${brandCounts[b]})</button>`).join('')}
+    ${platformList.map(p=>`<button type="button" class="chip-opt ${posBrandFilter===p?'selected':''}" data-brand="${p}">${platformIcon(p)}${p} (${platformCounts[p]})</button>`).join('')}
+  ` : '';
+  const androidBrandList = Object.keys(androidBrandCounts).sort((a,b)=> androidBrandCounts[b]-androidBrandCounts[a]);
+  if(posBrandFilter==='Android' && !androidBrandList.includes(posBrandSubFilter)) posBrandSubFilter = '';
+  document.getElementById('pos-brand-subfilter').style.display = posBrandFilter==='Android' ? 'flex' : 'none';
+  document.getElementById('pos-brand-subfilter').innerHTML = posBrandFilter==='Android' ? `
+    <button type="button" class="chip-opt ${!posBrandSubFilter?'selected':''}" data-subbrand="">كل الشركات</button>
+    ${androidBrandList.map(b=>`<button type="button" class="chip-opt ${posBrandSubFilter===b?'selected':''}" data-subbrand="${b}">${b} (${androidBrandCounts[b]})</button>`).join('')}
   ` : '';
 
-  const units = posBrandFilter ? allUnits.filter(u=>u.model.brand===posBrandFilter) : allUnits;
+  const units = allUnits.filter(u=>{
+    const matchesPlatform = !posBrandFilter || platformOf(u.model.brand)===posBrandFilter;
+    const matchesSubBrand = !(posBrandFilter==='Android' && posBrandSubFilter) || u.model.brand===posBrandSubFilter;
+    return matchesPlatform && matchesSubBrand;
+  });
   document.getElementById('pos-available-count').textContent = units.length;
   document.getElementById('pos-device-grid').innerHTML = units.length ? units.map(u=>`
     <div class="device-tile" data-pick="${u.imei}">
@@ -1394,6 +1431,12 @@ function renderPosDeviceGrid(){
 document.getElementById('pos-platform-filter').addEventListener('click', e=>{
   const b = e.target.closest('[data-brand]'); if(!b) return;
   posBrandFilter = b.dataset.brand;
+  posBrandSubFilter = '';
+  renderPosDeviceGrid();
+});
+document.getElementById('pos-brand-subfilter').addEventListener('click', e=>{
+  const b = e.target.closest('[data-subbrand]'); if(!b) return;
+  posBrandSubFilter = b.dataset.subbrand;
   renderPosDeviceGrid();
 });
 document.getElementById('pos-device-grid').addEventListener('click', e=>{
