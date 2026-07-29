@@ -345,9 +345,51 @@
   }
 
   @media print{
+    body *{ visibility:hidden; }
+    #invoice-print-sheet, #invoice-print-sheet *{ visibility:visible; }
+    #invoice-print-sheet{ display:block !important; position:absolute; top:0; right:0; width:100%; }
     .sidebar, .mobile-topbar, .page-head-actions, .toast, .modal-overlay{ display:none !important; }
     body{ background:#fff; color:#000; }
     .main{ padding:0; }
+  }
+
+  /* ===== فاتورة الطباعة ===== */
+  .invoice-sheet{
+    display:none;
+    width:210mm; min-height:297mm; margin:0 auto; background:#fff; color:#1a1208;
+    padding:14mm 12mm; font-family:var(--sans); direction:rtl;
+  }
+  .invoice-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:6mm; }
+  .invoice-shop-name{ font-family:var(--display); font-weight:900; font-size:30px; color:#171207; }
+  .invoice-tagline{ font-size:12px; color:#3a3020; margin-top:4px; font-weight:600; }
+  .invoice-meta-block{ text-align:left; font-size:12.5px; color:#2a2214; }
+  .invoice-meta-block div{ margin-bottom:4px; }
+  .invoice-meta-block b{ color:#171207; }
+  .invoice-logo{
+    width:64px; height:64px; border-radius:50%; border:2px solid var(--accent);
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+    background:radial-gradient(circle at 35% 30%, #fff7e8, #f2e2bb);
+  }
+  .invoice-logo svg{ width:32px; height:32px; }
+  .invoice-customer{ font-size:13.5px; margin:5mm 0 6mm; padding-bottom:4mm; border-bottom:1.5px solid #171207; }
+  .invoice-table{ width:100%; border-collapse:collapse; margin-bottom:6mm; }
+  .invoice-table th{
+    background:linear-gradient(180deg, #5a86a0, #3f6a83); color:#fff; font-size:12.5px; font-weight:700;
+    padding:8px 10px; text-align:center; border:1px solid #3f6a83;
+  }
+  .invoice-table td{ border:1px solid #ccc; padding:9px 10px; font-size:12.5px; text-align:center; }
+  .invoice-table td:first-child, .invoice-table th:first-child{ text-align:right; }
+  .invoice-table tr.subtotal td{ font-weight:700; background:#f7f5ef; }
+  .invoice-table tr.tax td, .invoice-table tr.grand td{ font-weight:800; }
+  .invoice-table tr.grand td{ background:#f2e6c8; font-size:14px; }
+  .invoice-warranty{ font-size:12.5px; margin-top:4mm; line-height:1.9; }
+  .invoice-warranty .no-warranty{ color:#b3271e; font-weight:700; margin-top:3px; }
+  .invoice-footer{ margin-top:14mm; text-align:center; font-size:12px; color:#2a2214; }
+  .invoice-footer .delivery{ color:#b3271e; font-weight:700; margin-bottom:6px; }
+  .invoice-footer .contact{ font-weight:700; margin-bottom:4px; }
+  .invoice-footer .handle{ color:#171207; font-weight:700; }
+  @media print{
+    .invoice-sheet{ padding:6mm 0; }
   }
 
   /* ===== شاشة تسجيل الدخول ===== */
@@ -592,7 +634,7 @@
         <div class="card" id="pos-receipt-card" style="display:none;">
           <div class="card-head">
             <div class="card-title">آخر فاتورة</div>
-            <button class="btn secondary sm" onclick="window.print()">
+            <button class="btn secondary sm" onclick="if(lastPosSaleRow) printInvoiceForRow(lastPosSaleRow);">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg>
               طباعة
             </button>
@@ -694,6 +736,20 @@
         </div>
 
         <div class="card">
+          <div class="card-head"><div class="card-title">إعدادات الفاتورة</div></div>
+          <p class="hint" style="margin-bottom:14px;">هذي البيانات تظهر بالفاتورة المطبوعة اللي تنطبع للزبون.</p>
+          <form id="invoice-settings-form">
+            <div class="field"><label>الوصف المختصر (تحت اسم المحل)</label><input id="set-invoice-tagline" placeholder="كل ما تحتاج هنا واكثر"></div>
+            <div class="field"><label>أرقام الهاتف</label><input id="set-invoice-phones" placeholder="07735092960 - 07739844226"></div>
+            <div class="field"><label>العنوان</label><input id="set-invoice-address" placeholder="البصرة - الطويسه - شارع السوق الجديد"></div>
+            <div class="field"><label>حساب السوشيل ميديا</label><input id="set-invoice-social" placeholder="@_3k3a"></div>
+            <div class="field"><label>ملاحظة التوصيل</label><input id="set-invoice-delivery" placeholder="التوصيل متاح لكل محافظات العراق"></div>
+            <div class="field"><label>مدة الضمان (بالأيام)</label><input type="number" min="0" id="set-invoice-warranty-days" placeholder="10"></div>
+            <button type="submit" class="btn block">حفظ إعدادات الفاتورة</button>
+          </form>
+        </div>
+
+        <div class="card">
           <div class="card-head"><div class="card-title">شركات هواتف الأندرويد <span>تظهر كخيارات سريعة عند إضافة جهاز</span></div></div>
           <div class="chip-row" id="brand-manage-list"></div>
           <form id="brand-add-form" style="display:flex; gap:8px;">
@@ -766,6 +822,8 @@
   </div>
 </div>
 
+<div id="invoice-print-sheet" class="invoice-sheet"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
@@ -778,9 +836,15 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const DEFAULT_ANDROID_BRANDS = ['Samsung','Xiaomi','Huawei','Honor','Oppo','Vivo','Infinix','Tecno','Realme','OnePlus','Motorola','Nokia','Google','Itel','Lenovo','ZTE','Asus','Sony','LG','Gionee'];
 function androidBrands(){ return (state.settings.androidBrands && state.settings.androidBrands.length) ? state.settings.androidBrands : DEFAULT_ANDROID_BRANDS; }
+function defaultSettings(){
+  return {
+    shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice(),
+    invoiceTagline:'', invoicePhones:'', invoiceAddress:'', invoiceSocial:'', invoiceDelivery:'', warrantyDays: 10
+  };
+}
 
 let nextId = { model:1, unit:1, sale:1, expense:1 };
-let state = { settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, models:[], units:[], sales:[], expenses:[] };
+let state = { settings: defaultSettings(), models:[], units:[], sales:[], expenses:[] };
 
 function setSyncStatus(connected){
   const dot = document.getElementById('sync-dot');
@@ -808,8 +872,8 @@ async function loadState(){
     if(error) throw error;
     setSyncStatus(true);
     if(!data || !data.data || !data.data.state) return false;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() } }, data.data.state);
-    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, state.settings);
+    state = Object.assign({ settings: defaultSettings() }, data.data.state);
+    state.settings = Object.assign(defaultSettings(), state.settings);
     nextId = data.data.nextId || nextId;
     return true;
   }catch(e){
@@ -823,8 +887,8 @@ async function pullRemoteChanges(){
   try{
     const { data, error } = await sb.from('app_state').select('data, updated_at').eq('id',1).single();
     if(error || !data || !data.data || !data.data.state) return;
-    state = Object.assign({ settings:{ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() } }, data.data.state);
-    state.settings = Object.assign({ shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice() }, state.settings);
+    state = Object.assign({ settings: defaultSettings() }, data.data.state);
+    state.settings = Object.assign(defaultSettings(), state.settings);
     nextId = data.data.nextId || nextId;
     setSyncStatus(true);
     applyShopNameToUi();
@@ -865,6 +929,69 @@ function unitLabel(unit){
 }
 function saleItemLabel(it){
   return `${it.brand||''} ${it.model||''} · ${it.color||''} ${it.storage||''} · ${it.condition||''}`;
+}
+function formatDateDMY(iso){
+  if(!iso) return '';
+  const parts = iso.split('-');
+  if(parts.length!==3) return iso;
+  const [y,m,d] = parts;
+  return `${d}-${m}-${y}`;
+}
+function buildInvoiceHTML(row){
+  const s = state.settings;
+  const itemName = saleItemLabel(row);
+  const qty = 1;
+  const unitPrice = row.salePrice;
+  const lineTotal = unitPrice * qty;
+  const tax = 0;
+  const grandTotal = lineTotal + tax;
+  const warrantyDays = s.warrantyDays ?? 10;
+  return `
+    <div class="invoice-head">
+      <div>
+        <div class="invoice-shop-name">${s.shopName || 'علي فون'}</div>
+        ${s.invoiceTagline ? `<div class="invoice-tagline">${s.invoiceTagline}</div>` : ''}
+        <div class="invoice-tagline" style="margin-top:8px; color:#171207;">نوع الفاتورة : نقدي</div>
+      </div>
+      <div class="invoice-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8a5a24" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M10.5 18.2h3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="invoice-meta-block">
+        <div><b>التاريخ :</b> ${formatDateDMY(row.date)}</div>
+        <div><b>رقم الفاتورة :</b> ${row.invoiceNumber}</div>
+      </div>
+    </div>
+    <div class="invoice-customer"><b>حضرة السيد :</b> ${row.customer || '—'}</div>
+    <table class="invoice-table">
+      <thead>
+        <tr><th>اسم الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>التكلفة</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>${itemName}${row.imei? ` <span style="color:#777; font-size:11px;">(IMEI: ${row.imei})</span>` : ''}</td>
+          <td>${qty}</td>
+          <td>${fmt(unitPrice)} ${CUR()}</td>
+          <td>${fmt(lineTotal)} ${CUR()}</td>
+        </tr>
+        <tr class="subtotal"><td colspan="3">المجموع الفرعي</td><td>${fmt(lineTotal)} ${CUR()}</td></tr>
+        <tr class="tax"><td colspan="3">الضريبة</td><td>${fmt(tax)} ${CUR()}</td></tr>
+        <tr class="grand"><td colspan="3">الإجمالي</td><td>${fmt(grandTotal)} ${CUR()}</td></tr>
+      </tbody>
+    </table>
+    <div class="invoice-warranty">
+      ضمان ${warrantyDays} ايام استبدال للأجهزة المستخدمة في حال وجود خلل + سنة برمجة
+      <div class="no-warranty">خلاف ذلك لا يوجد ضمان ..</div>
+    </div>
+    <div class="invoice-footer">
+      ${s.invoiceDelivery ? `<div class="delivery">🌐 ${s.invoiceDelivery}</div>` : ''}
+      ${(s.invoiceAddress || s.invoicePhones) ? `<div class="contact">${[s.invoiceAddress, s.invoicePhones].filter(Boolean).join(' - ')}</div>` : ''}
+      ${s.invoiceSocial ? `<div class="handle">${s.shopName || ''} - ${s.invoiceSocial}</div>` : ''}
+    </div>
+  `;
+}
+function printInvoiceForRow(row){
+  document.getElementById('invoice-print-sheet').innerHTML = buildInvoiceHTML(row);
+  window.print();
 }
 function allSaleItemsFlat(){
   const rows = [];
@@ -1353,6 +1480,7 @@ document.getElementById('inventory-body').addEventListener('click', e=>{
    نقطة البيع
    ============================================================ */
 let posSelectedUnit = null;
+let lastPosSaleRow = null;
 
 function posLookup(imei){
   const unit = state.units.find(u=>u.imei===imei);
@@ -1491,6 +1619,7 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
   saveState();
 
   const profit = (price-discount) - posSelectedUnit.purchasePrice;
+  lastPosSaleRow = { ...sale.items[0], saleId:sale.id, invoiceNumber:sale.invoiceNumber, date:sale.date, customer:sale.customer, payment:sale.payment };
   document.getElementById('pos-receipt-card').style.display = 'block';
   document.getElementById('pos-receipt').innerHTML = `
     <div class="receipt-row"><span>رقم الفاتورة</span><span style="font-family:var(--mono)">${sale.invoiceNumber}</span></div>
@@ -1534,7 +1663,12 @@ function renderSalesHistory(filter=''){
       <td style="font-family:var(--mono); color:${(r.salePrice-r.costPrice)>=0?'var(--green)':'var(--red)'}">${fmt(r.salePrice-r.costPrice)}${CUR()}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.purchaseDate||'—'}</td>
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
-      <td><button class="icon-btn danger" title="إلغاء البيع (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
+          <button class="icon-btn danger" title="إلغاء البيع (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+        </div>
+      </td>
     </tr>`).join('');
 }
 document.getElementById('sales-search').addEventListener('input', e=> renderSalesHistory(e.target.value));
@@ -1545,6 +1679,13 @@ document.getElementById('scan-sales-search-btn').addEventListener('click', ()=>{
   });
 });
 document.getElementById('sales-body').addEventListener('click', e=>{
+  const printBtn = e.target.closest('[data-print]');
+  if(printBtn){
+    const saleId = Number(printBtn.dataset.print);
+    const row = allSaleItemsFlat().find(r=>r.saleId===saleId);
+    if(row) printInvoiceForRow(row);
+    return;
+  }
   const btn = e.target.closest('[data-void]');
   if(!btn) return;
   const saleId = Number(btn.dataset.void);
@@ -1576,14 +1717,25 @@ document.getElementById('sales-body').addEventListener('click', e=>{
    التقارير المالية
    ============================================================ */
 function renderReports(){
-  const capitalInStock = state.units.filter(u=>u.status!=='مباع').reduce((a,u)=>a+u.purchasePrice,0);
+  const stockUnits = state.units.filter(u=>u.status!=='مباع');
+  const capitalApple = stockUnits.reduce((a,u)=>{
+    const m = state.models.find(x=>x.id===u.modelId);
+    return platformOf(m?.brand)==='Apple' ? a+u.purchasePrice : a;
+  },0);
+  const capitalAndroid = stockUnits.reduce((a,u)=>{
+    const m = state.models.find(x=>x.id===u.modelId);
+    return platformOf(m?.brand)==='Android' ? a+u.purchasePrice : a;
+  },0);
+  const capitalInStock = capitalApple + capitalAndroid;
   const allSales = allSaleItemsFlat();
   const totalRevenue = allSales.reduce((a,r)=>a+r.salePrice,0);
   const totalGrossProfit = allSales.reduce((a,r)=>a+(r.salePrice-r.costPrice),0);
   const totalExpenses = state.expenses.reduce((a,e)=>a+e.amount,0);
   const totalNetProfit = totalGrossProfit - totalExpenses;
   const financeCards = [
-    { label:'رأس المال في المخزون الحالي', value: fmt(capitalInStock), unit:CUR(), color:'var(--amber)' },
+    { label:'🍎 رأس المال · Apple', value: fmt(capitalApple), unit:CUR(), color:'var(--text-dim)' },
+    { label:'🤖 رأس المال · Android', value: fmt(capitalAndroid), unit:CUR(), color:'var(--text-dim)' },
+    { label:'رأس المال الكلي بالمخزون', value: fmt(capitalInStock), unit:CUR(), color:'var(--amber)' },
     { label:'إجمالي المبيعات (منذ البداية)', value: fmt(totalRevenue), unit:CUR(), color:'var(--accent)' },
     { label:'إجمالي المصاريف (منذ البداية)', value: fmt(totalExpenses), unit:CUR(), color:'var(--red)' },
     { label:'صافي الربح الكلي', value: fmt(totalNetProfit), unit:CUR(), color: totalNetProfit>=0?'var(--green)':'var(--red)' },
@@ -1650,6 +1802,12 @@ function applyShopNameToUi(){
 }
 function renderSettings(){
   document.getElementById('set-shop-name').value = state.settings.shopName || '';
+  document.getElementById('set-invoice-tagline').value = state.settings.invoiceTagline || '';
+  document.getElementById('set-invoice-phones').value = state.settings.invoicePhones || '';
+  document.getElementById('set-invoice-address').value = state.settings.invoiceAddress || '';
+  document.getElementById('set-invoice-social').value = state.settings.invoiceSocial || '';
+  document.getElementById('set-invoice-delivery').value = state.settings.invoiceDelivery || '';
+  document.getElementById('set-invoice-warranty-days').value = state.settings.warrantyDays ?? 10;
   document.getElementById('pin-status').textContent = state.settings.pinCode
     ? 'قفل التطبيق مفعل حاليا 🔒'
     : 'قفل التطبيق غير مفعل حاليا';
@@ -1696,6 +1854,18 @@ document.getElementById('settings-form').addEventListener('submit', e=>{
   applyShopNameToUi();
   renderDashboard();
   toast('تم حفظ الإعدادات ✓');
+});
+document.getElementById('invoice-settings-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  state.settings.invoiceTagline = document.getElementById('set-invoice-tagline').value.trim();
+  state.settings.invoicePhones = document.getElementById('set-invoice-phones').value.trim();
+  state.settings.invoiceAddress = document.getElementById('set-invoice-address').value.trim();
+  state.settings.invoiceSocial = document.getElementById('set-invoice-social').value.trim();
+  state.settings.invoiceDelivery = document.getElementById('set-invoice-delivery').value.trim();
+  const days = Number(document.getElementById('set-invoice-warranty-days').value);
+  state.settings.warrantyDays = Number.isFinite(days) && days>=0 ? days : 10;
+  saveState();
+  toast('تم حفظ إعدادات الفاتورة ✓');
 });
 document.getElementById('pin-form').addEventListener('submit', e=>{
   e.preventDefault();
@@ -1818,7 +1988,7 @@ document.getElementById('btn-import').addEventListener('change', e=>{
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', ()=>{
-    state = { settings:{ shopName: state.settings.shopName, currency: state.settings.currency, pinCode: state.settings.pinCode, androidBrands: state.settings.androidBrands }, models:[], units:[], sales:[], expenses:[] };
+    state = { settings: { ...state.settings }, models:[], units:[], sales:[], expenses:[] };
     nextId = { model:1, unit:1, sale:1, expense:1 };
     saveState();
     applyShopNameToUi();
