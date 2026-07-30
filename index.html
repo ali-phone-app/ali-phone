@@ -213,6 +213,11 @@
 
   .search-bar{ display:flex; gap:8px; margin-bottom:14px; }
   .search-bar input{ flex:1; }
+  .search-clear-wrap{ position:relative; flex:1; }
+  .search-clear-wrap input{ width:100%; padding-left:32px; }
+  .search-clear-btn{ position:absolute; top:50%; left:8px; transform:translateY(-50%); width:22px; height:22px; border:none; border-radius:50%; background:var(--surface-3); color:var(--text-dim); font-size:13px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; }
+  .search-clear-btn.show{ display:flex; }
+  .search-clear-btn:hover{ background:var(--surface-2); color:var(--text); }
 
   .empty{ text-align:center; padding:46px 10px; color:var(--text-faint); font-size:13px; }
   .empty svg{ width:34px; height:34px; opacity:.35; margin-bottom:10px; }
@@ -378,6 +383,7 @@
     padding:8px 10px; text-align:center; border:1px solid #3f6a83;
   }
   .invoice-table td{ border:1px solid #ccc; padding:9px 10px; font-size:12.5px; text-align:center; }
+  .invoice-table tbody tr:not(.subtotal):not(.tax):not(.grand):nth-child(even) td{ background:#f7f5ef; }
   .invoice-table td:first-child, .invoice-table th:first-child{ text-align:right; }
   .invoice-table tr.subtotal td{ font-weight:700; background:#f7f5ef; }
   .invoice-table tr.tax td, .invoice-table tr.grand td{ font-weight:800; }
@@ -391,6 +397,19 @@
   @media print{
     .invoice-sheet{ padding:6mm 0; }
   }
+
+  /* ===== جدول التقرير الشهري (طبق الأصل مثل جداول Numbers/Excel) ===== */
+  .mreport-title{ text-align:center; font-weight:800; font-size:15px; color:#171207; margin-bottom:3mm; }
+  .mreport-table{ width:100%; border-collapse:collapse; margin-bottom:6mm; border:1px solid #b8b8b8; }
+  .mreport-table th{
+    background:#3f8f52; color:#fff; font-size:12px; font-weight:700;
+    padding:9px 6px; text-align:center; border:1px solid #34793f;
+  }
+  .mreport-table td{ border:1px solid #d8d8d8; padding:9px 6px; font-size:12px; text-align:center; font-weight:600; color:#171207; }
+  .mreport-table tbody tr:nth-child(odd) td{ background:#fff; }
+  .mreport-table tbody tr:nth-child(even) td{ background:#f0f0f0; }
+  .mreport-table tfoot td{ font-weight:800; background:#e4f2e6 !important; border:1px solid #b8d9bd; }
+  .mreport-table tfoot tr.grand td{ background:#3f8f52 !important; color:#fff; font-size:13px; }
 
   /* ===== شاشة تسجيل الدخول ===== */
   .login-screen{
@@ -562,7 +581,10 @@
       </div>
 
       <div class="search-bar">
-        <input type="text" id="inv-search" placeholder="ابحث بالـ IMEI أو الماركة أو الموديل...">
+        <div class="search-clear-wrap">
+          <input type="text" id="inv-search" placeholder="ابحث بالـ IMEI أو الماركة أو الموديل...">
+          <button type="button" class="search-clear-btn" id="clear-inv-search" title="مسح">✕</button>
+        </div>
         <button type="button" class="btn secondary" id="scan-inv-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
         </button>
@@ -600,7 +622,10 @@
           <div class="field">
             <label>IMEI / الرقم التسلسلي</label>
             <div style="display:flex; gap:8px;">
-              <input id="pos-imei" style="font-family:var(--mono); flex:1;" placeholder="امسح أو اكتب الرقم ثم Enter">
+              <div class="search-clear-wrap">
+                <input id="pos-imei" style="font-family:var(--mono); width:100%;" placeholder="امسح أو اكتب الرقم ثم Enter">
+                <button type="button" class="search-clear-btn" id="clear-pos-imei" title="مسح">✕</button>
+              </div>
               <button type="button" class="btn secondary" id="scan-pos-imei-btn" style="white-space:nowrap; padding:0 14px;">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
               </button>
@@ -631,6 +656,12 @@
           <div class="card-head" style="margin-bottom:10px;">
             <div class="card-title">أو اختر من الأجهزة المتوفرة <span>(<span id="pos-available-count">0</span> جهاز)</span></div>
           </div>
+          <div class="search-bar" style="margin-bottom:10px;">
+            <div class="search-clear-wrap">
+              <input type="text" id="pos-device-search" placeholder="ابحث باسم الجهاز أو IMEI...">
+              <button type="button" class="search-clear-btn" id="clear-pos-device-search" title="مسح">✕</button>
+            </div>
+          </div>
           <div class="chip-row" id="pos-platform-filter" style="margin-bottom:10px;"></div>
           <div class="chip-row" id="pos-brand-subfilter" style="margin-bottom:10px;"></div>
           <div class="device-grid" id="pos-device-grid"></div>
@@ -658,7 +689,10 @@
         </div>
       </div>
       <div class="search-bar">
-        <input type="text" id="sales-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز أو IMEI...">
+        <div class="search-clear-wrap">
+          <input type="text" id="sales-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز أو IMEI...">
+          <button type="button" class="search-clear-btn" id="clear-sales-search" title="مسح">✕</button>
+        </div>
         <select id="sales-month-filter" style="flex:0 0 170px; max-width:170px;"><option value="">كل الأشهر</option></select>
         <button type="button" class="btn secondary" id="scan-sales-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
@@ -684,7 +718,10 @@
         </div>
       </div>
       <div class="search-bar">
-        <input type="text" id="invoices-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز...">
+        <div class="search-clear-wrap">
+          <input type="text" id="invoices-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز...">
+          <button type="button" class="search-clear-btn" id="clear-invoices-search" title="مسح">✕</button>
+        </div>
         <select id="invoices-month-filter" style="flex:0 0 170px; max-width:170px;"><option value="">كل الأشهر</option></select>
         <button type="button" class="btn secondary" id="scan-invoices-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
@@ -908,10 +945,14 @@ function setSyncStatus(connected){
   label.textContent = connected ? 'متصل بالسحابة' : 'تعذر الاتصال';
 }
 
+let lastKnownUpdatedAt = null;
+
 async function saveState(){
   try{
-    const { error } = await sb.from('app_state').upsert({ id:1, data:{ state, nextId }, updated_at:new Date().toISOString() });
+    const ts = new Date().toISOString();
+    const { error } = await sb.from('app_state').upsert({ id:1, data:{ state, nextId }, updated_at:ts });
     if(error) throw error;
+    lastKnownUpdatedAt = ts;
     setSyncStatus(true);
   }catch(e){
     console.warn('تعذر الحفظ على قاعدة البيانات', e);
@@ -921,9 +962,10 @@ async function saveState(){
 }
 async function loadState(){
   try{
-    const { data, error } = await sb.from('app_state').select('data').eq('id',1).single();
+    const { data, error } = await sb.from('app_state').select('data, updated_at').eq('id',1).single();
     if(error) throw error;
     setSyncStatus(true);
+    lastKnownUpdatedAt = data?.updated_at || null;
     if(!data || !data.data || !data.data.state) return false;
     state = Object.assign({ settings: defaultSettings() }, data.data.state);
     state.settings = Object.assign(defaultSettings(), state.settings);
@@ -935,15 +977,21 @@ async function loadState(){
     return false;
   }
 }
-/* مزامنة دورية: يلتقط أي تغيير يصير من جهاز ثاني (جوال/لابتوب) تلقائيا */
+/* مزامنة دورية موفّرة: نتحقق أول بس من "وقت آخر تعديل" (بايتات قليلة جدا)،
+   وما نجيب كل البيانات كاملة إلا إذا فعلا صار تغيير من جهاز ثاني (جوال/لابتوب) */
 async function pullRemoteChanges(){
   try{
+    const { data: meta, error: metaErr } = await sb.from('app_state').select('updated_at').eq('id',1).single();
+    if(metaErr || !meta){ setSyncStatus(false); return; }
+    setSyncStatus(true);
+    if(lastKnownUpdatedAt && meta.updated_at === lastKnownUpdatedAt) return; // ماكو تغيير — نوقف هنا بدون ما نجيب البيانات الكاملة
+
     const { data, error } = await sb.from('app_state').select('data, updated_at').eq('id',1).single();
     if(error || !data || !data.data || !data.data.state) return;
     state = Object.assign({ settings: defaultSettings() }, data.data.state);
     state.settings = Object.assign(defaultSettings(), state.settings);
     nextId = data.data.nextId || nextId;
-    setSyncStatus(true);
+    lastKnownUpdatedAt = data.updated_at;
     applyShopNameToUi();
     const active = document.querySelector('.nav-btn.active');
     if(active) renderAll(active.dataset.page);
@@ -1596,10 +1644,13 @@ function renderPosDeviceGrid(){
     ${androidBrandList.map(b=>`<button type="button" class="chip-opt ${posBrandSubFilter===b?'selected':''}" data-subbrand="${b}">${b} (${androidBrandCounts[b]})</button>`).join('')}
   ` : '';
 
+  const posSearchVal = (document.getElementById('pos-device-search')?.value || '').trim().toLowerCase();
   const units = allUnits.filter(u=>{
     const matchesPlatform = !posBrandFilter || platformOf(u.model.brand)===posBrandFilter;
     const matchesSubBrand = !(posBrandFilter==='Android' && posBrandSubFilter) || u.model.brand===posBrandSubFilter;
-    return matchesPlatform && matchesSubBrand;
+    const hay = (u.model.brand+' '+u.model.model+' '+(u.imei||'')).toLowerCase();
+    const matchesSearch = !posSearchVal || hay.includes(posSearchVal);
+    return matchesPlatform && matchesSubBrand && matchesSearch;
   });
   document.getElementById('pos-available-count').textContent = units.length;
   document.getElementById('pos-device-grid').innerHTML = units.length ? units.map(u=>`
@@ -1610,6 +1661,7 @@ function renderPosDeviceGrid(){
     </div>
   `).join('') : `<div class="empty">لا توجد أجهزة متوفرة حاليا للبيع</div>`;
 }
+document.getElementById('pos-device-search').addEventListener('input', ()=> renderPosDeviceGrid());
 document.getElementById('pos-platform-filter').addEventListener('click', e=>{
   const b = e.target.closest('[data-brand]'); if(!b) return;
   posBrandFilter = b.dataset.brand;
@@ -1985,11 +2037,11 @@ function buildMonthlyReportHTML(month){
 
   const rowsHtml = sales.length ? sales.map(r=>`
     <tr>
-      <td style="text-align:right;">${saleItemLabel(r)}${r.imei? ` <span style="color:#777; font-size:10.5px;">(${r.imei})</span>` : ''}</td>
+      <td>${saleItemLabel(r)}${r.imei? ` <span style="color:#777; font-size:10.5px;">(${r.imei})</span>` : ''}</td>
       <td>${fmt(r.costPrice)} ${CUR()}</td>
       <td>${fmt(r.salePrice)} ${CUR()}</td>
       <td>${formatDateDMY(r.date)}</td>
-      <td style="color:${(r.salePrice-r.costPrice)>=0?'#1e7d4b':'#b3271e'}; font-weight:700;">${fmt(r.salePrice-r.costPrice)} ${CUR()}</td>
+      <td style="color:${(r.salePrice-r.costPrice)>=0?'#1e7d4b':'#b3271e'};">${fmt(r.salePrice-r.costPrice)} ${CUR()}</td>
     </tr>`).join('') : `<tr><td colspan="5" style="color:#777;">ماكو عمليات بيع بهذا الشهر</td></tr>`;
 
   return `
@@ -2006,20 +2058,22 @@ function buildMonthlyReportHTML(month){
         <div><b>الشهر :</b> ${monthLabel(month)}</div>
       </div>
     </div>
-    <div class="invoice-customer"><b>تقرير شهر :</b> ${monthLabel(month)}</div>
-    <table class="invoice-table">
+    <div class="mreport-title">جدول مبيعات ${monthLabel(month)}</div>
+    <table class="mreport-table">
       <thead>
-        <tr><th>الجهاز المباع</th><th>سعر الشراء</th><th>سعر البيع</th><th>تاريخ البيع</th><th>صافي الربح</th></tr>
+        <tr><th>اسم الجهاز المباع</th><th>سعر الشراء</th><th>سعر البيع</th><th>تاريخ البيع</th><th>صافي الربح</th></tr>
       </thead>
       <tbody>
         ${rowsHtml}
-        <tr class="subtotal"><td colspan="1">عدد الأجهزة المباعة</td><td colspan="4">${sales.length}</td></tr>
-        <tr class="subtotal"><td colspan="1">إجمالي سعر الشراء</td><td colspan="4">${fmt(costTotal)} ${CUR()}</td></tr>
-        <tr class="subtotal"><td colspan="1">إجمالي المبيعات</td><td colspan="4">${fmt(revenue)} ${CUR()}</td></tr>
-        <tr class="tax"><td colspan="1">مجمل الربح</td><td colspan="4">${fmt(grossProfit)} ${CUR()}</td></tr>
-        <tr class="tax"><td colspan="1">إجمالي المصاريف التشغيلية</td><td colspan="4">${fmt(expenseTotal)} ${CUR()}</td></tr>
-        <tr class="grand"><td colspan="1">صافي الربح لهذا الشهر</td><td colspan="4">${fmt(netProfit)} ${CUR()}</td></tr>
       </tbody>
+      <tfoot>
+        <tr><td>عدد الأجهزة المباعة</td><td colspan="4">${sales.length}</td></tr>
+        <tr><td>إجمالي سعر الشراء</td><td colspan="4">${fmt(costTotal)} ${CUR()}</td></tr>
+        <tr><td>إجمالي المبيعات</td><td colspan="4">${fmt(revenue)} ${CUR()}</td></tr>
+        <tr><td>مجمل الربح</td><td colspan="4">${fmt(grossProfit)} ${CUR()}</td></tr>
+        <tr><td>إجمالي المصاريف التشغيلية</td><td colspan="4">${fmt(expenseTotal)} ${CUR()}</td></tr>
+        <tr class="grand"><td>صافي الربح لهذا الشهر</td><td colspan="4">${fmt(netProfit)} ${CUR()}</td></tr>
+      </tfoot>
     </table>
     <div class="invoice-footer">
       ${(s.invoiceAddress || s.invoicePhones) ? `<div class="contact">${[s.invoiceAddress, s.invoicePhones].filter(Boolean).join(' - ')}</div>` : ''}
@@ -2231,6 +2285,28 @@ document.getElementById('invoices-body').addEventListener('click', e=>{
     toast('تم إلغاء الفاتورة وإرجاع الجهاز للمخزون');
   });
 });
+
+/* ============================================================
+   أزرار مسح حقول البحث (X)
+   ============================================================ */
+function wireSearchClear(inputId, btnId){
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if(!input || !btn) return;
+  const toggle = ()=> btn.classList.toggle('show', !!input.value);
+  input.addEventListener('input', toggle);
+  toggle();
+  btn.addEventListener('click', ()=>{
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    input.focus();
+  });
+}
+wireSearchClear('inv-search', 'clear-inv-search');
+wireSearchClear('sales-search', 'clear-sales-search');
+wireSearchClear('invoices-search', 'clear-invoices-search');
+wireSearchClear('pos-device-search', 'clear-pos-device-search');
+wireSearchClear('pos-imei', 'clear-pos-imei');
 
 /* ============================================================
    Init
