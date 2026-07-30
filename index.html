@@ -487,6 +487,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v19l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 8h6M9 12h6"/></svg>
         <span class="label">سجل المبيعات</span>
       </button>
+      <button class="nav-btn" data-page="invoices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16l3-1.5 3 1.5 3-1.5 3 1.5V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M8 13h6M8 17h4"/></svg>
+        <span class="label">الفواتير</span>
+        <span class="badge-count" id="nav-count-invoices">0</span>
+      </button>
       <button class="nav-btn" data-page="reports">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         <span class="label">التقارير المالية</span>
@@ -654,6 +659,7 @@
       </div>
       <div class="search-bar">
         <input type="text" id="sales-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز أو IMEI...">
+        <select id="sales-month-filter" style="flex:0 0 170px; max-width:170px;"><option value="">كل الأشهر</option></select>
         <button type="button" class="btn secondary" id="scan-sales-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
         </button>
@@ -666,6 +672,32 @@
         </table>
         </div>
         <div class="empty" id="sales-empty" style="display:none;">ماكو عمليات بيع بعد</div>
+      </div>
+    </section>
+
+    <!-- ============ INVOICES ============ -->
+    <section class="page" id="page-invoices">
+      <div class="page-head">
+        <div>
+          <div class="page-title">الفواتير</div>
+          <div class="page-sub">قايمة بكل الفواتير الصادرة، اطبعها أو ألغيها من هنا</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <input type="text" id="invoices-search" placeholder="ابحث برقم الفاتورة أو اسم الزبون أو الجهاز...">
+        <select id="invoices-month-filter" style="flex:0 0 170px; max-width:170px;"><option value="">كل الأشهر</option></select>
+        <button type="button" class="btn secondary" id="scan-invoices-search-btn" style="white-space:nowrap; padding:0 14px;" title="مسح الباركود للبحث">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 6v12M11 6v12M15 6v12"/></svg>
+        </button>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>الفاتورة</th><th>الجهاز</th><th>الزبون</th><th>الدفع</th><th>الإجمالي</th><th>التاريخ</th><th></th></tr></thead>
+          <tbody id="invoices-body"></tbody>
+        </table>
+        </div>
+        <div class="empty" id="invoices-empty" style="display:none;">ماكو فواتير بعد</div>
       </div>
     </section>
 
@@ -771,22 +803,42 @@
 
         <div class="card">
           <div class="card-head"><div class="card-title">تحميل تقرير شهري</div></div>
-          <p class="hint" style="margin-bottom:14px;">اختر الشهر وحمّل كشف كامل بالمبيعات والمصاريف والصافي — يفتح مباشرة بإكسل.</p>
+          <p class="hint" style="margin-bottom:14px;">اختر الشهر وحمّل كشف كامل بالمبيعات والمصاريف والصافي.</p>
           <div class="field"><label>الشهر</label><input type="month" id="export-month"></div>
-          <button class="btn block" id="btn-export-month">
+          <button class="btn block" id="btn-report-pdf" style="margin-bottom:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg>
+            تحميل التقرير (PDF · يشتغل بالموبايل)
+          </button>
+          <button class="btn secondary block" id="btn-export-month">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-            تحميل تقرير الشهر (Excel)
+            تحميل نفس التقرير (Excel/CSV)
           </button>
         </div>
 
         <div class="card">
           <div class="card-head"><div class="card-title">النسخ الاحتياطي</div></div>
-          <p class="hint" style="margin-bottom:14px;">جميع بياناتك محفوظة تلقائيا على قاعدة بيانات سحابية وتتزامن بين كل أجهزتك. خذ نسخة احتياطية بين فترة وأخرى للاطمئنان الإضافي.</p>
-          <button class="btn secondary block" id="btn-export" style="margin-bottom:10px;">
+          <p class="hint" style="margin-bottom:14px;">جميع بياناتك محفوظة تلقائيا على قاعدة بيانات سحابية وتتزامن بين كل أجهزتك. خذ نسخة احتياطية بين فترة وأخرى للاطمئنان الإضافي — اضغط الزر وقت ما تريد.</p>
+
+          <button class="btn secondary block" id="btn-backup-weekly" style="margin-bottom:6px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-            تنزيل نسخة احتياطية (JSON)
+            نسخة احتياطية أسبوعية
           </button>
-          <label style="margin-top:8px;">استعادة من ملف</label>
+          <div class="page-sub" id="backup-weekly-status" style="margin-bottom:12px;"></div>
+
+          <button class="btn secondary block" id="btn-backup-monthly" style="margin-bottom:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            نسخة احتياطية شهرية
+          </button>
+          <div class="page-sub" id="backup-monthly-status" style="margin-bottom:12px;"></div>
+
+          <button class="btn secondary block" id="btn-backup-yearly" style="margin-bottom:6px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            نسخة احتياطية سنوية
+          </button>
+          <div class="page-sub" id="backup-yearly-status" style="margin-bottom:4px;"></div>
+
+          <div class="divider-trace"></div>
+          <label style="margin-top:4px;">استعادة من ملف</label>
           <input type="file" id="btn-import" accept="application/json">
           <div class="divider-trace"></div>
           <button class="btn danger block" id="btn-reset">تصفير جميع البيانات</button>
@@ -839,7 +891,8 @@ function androidBrands(){ return (state.settings.androidBrands && state.settings
 function defaultSettings(){
   return {
     shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice(),
-    invoiceTagline:'', invoicePhones:'', invoiceAddress:'', invoiceSocial:'', invoiceDelivery:'', warrantyDays: 10
+    invoiceTagline:'', invoicePhones:'', invoiceAddress:'', invoiceSocial:'', invoiceDelivery:'', warrantyDays: 10,
+    lastBackup: { weekly:null, monthly:null, yearly:null }
   };
 }
 
@@ -1090,9 +1143,10 @@ window.addEventListener('popstate', e=>{
 
 function renderAll(pageName){
   if(pageName==='dashboard') renderDashboard();
-  if(pageName==='inventory') renderInventory();
+  if(pageName==='inventory') renderInventory(document.getElementById('inv-search')?.value || '');
   if(pageName==='pos') renderPosDeviceGrid();
-  if(pageName==='sales') renderSalesHistory();
+  if(pageName==='sales') renderSalesHistory(document.getElementById('sales-search')?.value || '');
+  if(pageName==='invoices') renderInvoices(document.getElementById('invoices-search')?.value || '');
   if(pageName==='reports') renderReports();
   if(pageName==='settings') renderSettings();
 }
@@ -1638,17 +1692,35 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
   posLookup('');
   renderPosDeviceGrid();
   renderInventory(document.getElementById('inv-search').value);
+  renderInvoices(document.getElementById('invoices-search')?.value || '');
   renderDashboard();
 });
 
 /* ============================================================
    سجل المبيعات
    ============================================================ */
+const ARABIC_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function monthLabel(m){
+  const [y,mo] = m.split('-');
+  return `${ARABIC_MONTHS[Number(mo)-1]||mo} ${y}`;
+}
+function populateMonthFilter(selectId, monthsSet){
+  const sel = document.getElementById(selectId);
+  const current = sel.value;
+  const sorted = [...monthsSet].sort((a,b)=> b.localeCompare(a));
+  sel.innerHTML = '<option value="">كل الأشهر</option>' + sorted.map(m=>`<option value="${m}">${monthLabel(m)}</option>`).join('');
+  if(sorted.includes(current)) sel.value = current;
+}
 function renderSalesHistory(filter=''){
   const f = filter.toLowerCase();
-  const rows = allSaleItemsFlat().filter(r=>{
+  const all = allSaleItemsFlat();
+  populateMonthFilter('sales-month-filter', new Set(all.map(r=>r.date.slice(0,7))));
+  const monthSel = document.getElementById('sales-month-filter').value;
+  const rows = all.filter(r=>{
     const hay = (r.invoiceNumber+' '+(r.customer||'')+' '+saleItemLabel(r)+' '+(r.imei||'')).toLowerCase();
-    return hay.includes(f);
+    const matchesText = hay.includes(f);
+    const matchesMonth = !monthSel || r.date.slice(0,7)===monthSel;
+    return matchesText && matchesMonth;
   }).sort((a,b)=> b.date.localeCompare(a.date) || b.saleId-a.saleId);
 
   document.getElementById('sales-empty').style.display = rows.length? 'none':'block';
@@ -1672,6 +1744,7 @@ function renderSalesHistory(filter=''){
     </tr>`).join('');
 }
 document.getElementById('sales-search').addEventListener('input', e=> renderSalesHistory(e.target.value));
+document.getElementById('sales-month-filter').addEventListener('change', ()=> renderSalesHistory(document.getElementById('sales-search').value));
 document.getElementById('scan-sales-search-btn').addEventListener('click', ()=>{
   openBarcodeScanner((code)=>{
     document.getElementById('sales-search').value = code;
@@ -1707,6 +1780,7 @@ document.getElementById('sales-body').addEventListener('click', e=>{
     state.sales = state.sales.filter(s=>s.id!==saleId);
     saveState();
     renderSalesHistory(document.getElementById('sales-search').value);
+    renderInvoices(document.getElementById('invoices-search')?.value || '');
     renderInventory(document.getElementById('inv-search').value);
     renderDashboard();
     toast('تم إلغاء البيع وإرجاع الجهاز للمخزون');
@@ -1812,6 +1886,7 @@ function renderSettings(){
     ? 'قفل التطبيق مفعل حاليا 🔒'
     : 'قفل التطبيق غير مفعل حاليا';
   renderBrandManageList();
+  renderBackupStatus();
 }
 function renderBrandManageList(){
   const list = document.getElementById('brand-manage-list');
@@ -1895,6 +1970,72 @@ document.getElementById('pin-form').addEventListener('submit', e=>{
   toast('تم حفظ رمز الدخول ✓');
 });
 
+/* ============================================================
+   تقرير الشهر (PDF قابل للطباعة/الحفظ من الموبايل)
+   ============================================================ */
+function buildMonthlyReportHTML(month){
+  const s = state.settings;
+  const sales = monthlySales(month).sort((a,b)=>a.date.localeCompare(b.date));
+  const expenses = monthlyExpenses(month).sort((a,b)=>a.date.localeCompare(b.date));
+  const revenue = sales.reduce((a,r)=>a+r.salePrice,0);
+  const costTotal = sales.reduce((a,r)=>a+r.costPrice,0);
+  const grossProfit = sales.reduce((a,r)=>a+(r.salePrice-r.costPrice),0);
+  const expenseTotal = expenses.reduce((a,e)=>a+e.amount,0);
+  const netProfit = grossProfit - expenseTotal;
+
+  const rowsHtml = sales.length ? sales.map(r=>`
+    <tr>
+      <td style="text-align:right;">${saleItemLabel(r)}${r.imei? ` <span style="color:#777; font-size:10.5px;">(${r.imei})</span>` : ''}</td>
+      <td>${fmt(r.costPrice)} ${CUR()}</td>
+      <td>${fmt(r.salePrice)} ${CUR()}</td>
+      <td>${formatDateDMY(r.date)}</td>
+      <td style="color:${(r.salePrice-r.costPrice)>=0?'#1e7d4b':'#b3271e'}; font-weight:700;">${fmt(r.salePrice-r.costPrice)} ${CUR()}</td>
+    </tr>`).join('') : `<tr><td colspan="5" style="color:#777;">ماكو عمليات بيع بهذا الشهر</td></tr>`;
+
+  return `
+    <div class="invoice-head">
+      <div>
+        <div class="invoice-shop-name">${s.shopName || 'علي فون'}</div>
+        <div class="invoice-tagline" style="margin-top:8px; color:#171207;">تقرير المبيعات الشهري</div>
+      </div>
+      <div class="invoice-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#8a5a24" stroke-width="1.8"><rect x="7" y="2" width="10" height="20" rx="2.4"/><path d="M10.5 18.2h3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="invoice-meta-block">
+        <div><b>تاريخ النسخة :</b> ${formatDateDMY(todayISO())}</div>
+        <div><b>الشهر :</b> ${monthLabel(month)}</div>
+      </div>
+    </div>
+    <div class="invoice-customer"><b>تقرير شهر :</b> ${monthLabel(month)}</div>
+    <table class="invoice-table">
+      <thead>
+        <tr><th>الجهاز المباع</th><th>سعر الشراء</th><th>سعر البيع</th><th>تاريخ البيع</th><th>صافي الربح</th></tr>
+      </thead>
+      <tbody>
+        ${rowsHtml}
+        <tr class="subtotal"><td colspan="1">عدد الأجهزة المباعة</td><td colspan="4">${sales.length}</td></tr>
+        <tr class="subtotal"><td colspan="1">إجمالي سعر الشراء</td><td colspan="4">${fmt(costTotal)} ${CUR()}</td></tr>
+        <tr class="subtotal"><td colspan="1">إجمالي المبيعات</td><td colspan="4">${fmt(revenue)} ${CUR()}</td></tr>
+        <tr class="tax"><td colspan="1">مجمل الربح</td><td colspan="4">${fmt(grossProfit)} ${CUR()}</td></tr>
+        <tr class="tax"><td colspan="1">إجمالي المصاريف التشغيلية</td><td colspan="4">${fmt(expenseTotal)} ${CUR()}</td></tr>
+        <tr class="grand"><td colspan="1">صافي الربح لهذا الشهر</td><td colspan="4">${fmt(netProfit)} ${CUR()}</td></tr>
+      </tbody>
+    </table>
+    <div class="invoice-footer">
+      ${(s.invoiceAddress || s.invoicePhones) ? `<div class="contact">${[s.invoiceAddress, s.invoicePhones].filter(Boolean).join(' - ')}</div>` : ''}
+    </div>
+  `;
+}
+function printMonthlyReport(month){
+  document.getElementById('invoice-print-sheet').innerHTML = buildMonthlyReportHTML(month);
+  window.print();
+}
+document.getElementById('btn-report-pdf').addEventListener('click', ()=>{
+  const month = document.getElementById('export-month').value;
+  if(!month){ toast('اختر الشهر أولا', true); return; }
+  printMonthlyReport(month);
+});
+
 function csvEscape(v){
   const s = String(v ?? '');
   return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
@@ -1951,16 +2092,32 @@ document.getElementById('btn-export-month').addEventListener('click', ()=>{
   toast('تم تحميل تقرير الشهر ✓');
 });
 
-document.getElementById('btn-export').addEventListener('click', ()=>{
+const BACKUP_LABELS = { weekly:'أسبوعية', monthly:'شهرية', yearly:'سنوية' };
+function downloadBackup(type){
   const blob = new Blob([JSON.stringify({ state, nextId }, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `نسخة-احتياطية-${todayISO()}.json`;
+  a.download = `نسخة-احتياطية-${BACKUP_LABELS[type]}-${todayISO()}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  toast('تم تنزيل النسخة الاحتياطية ✓');
-});
+  state.settings.lastBackup = state.settings.lastBackup || { weekly:null, monthly:null, yearly:null };
+  state.settings.lastBackup[type] = todayISO();
+  saveState();
+  renderBackupStatus();
+  toast(`تم تنزيل النسخة الاحتياطية ال${BACKUP_LABELS[type]} ✓`);
+}
+function renderBackupStatus(){
+  const lb = state.settings.lastBackup || {};
+  ['weekly','monthly','yearly'].forEach(type=>{
+    const el = document.getElementById(`backup-${type}-status`);
+    if(!el) return;
+    el.textContent = lb[type] ? `آخر نسخة: ${formatDateDMY(lb[type])}` : 'ماخذت نسخة بعد';
+  });
+}
+document.getElementById('btn-backup-weekly').addEventListener('click', ()=> downloadBackup('weekly'));
+document.getElementById('btn-backup-monthly').addEventListener('click', ()=> downloadBackup('monthly'));
+document.getElementById('btn-backup-yearly').addEventListener('click', ()=> downloadBackup('yearly'));
 
 document.getElementById('btn-import').addEventListener('change', e=>{
   const file = e.target.files[0];
@@ -1995,6 +2152,83 @@ document.getElementById('btn-reset').addEventListener('click', ()=>{
     renderAll('dashboard');
     goToPage('dashboard');
     toast('تم تصفير البيانات');
+  });
+});
+
+/* ============================================================
+   الفواتير
+   ============================================================ */
+function renderInvoices(filter=''){
+  const f = filter.toLowerCase();
+  const all = allSaleItemsFlat();
+  populateMonthFilter('invoices-month-filter', new Set(all.map(r=>r.date.slice(0,7))));
+  const monthSel = document.getElementById('invoices-month-filter').value;
+  const rows = all.filter(r=>{
+    const hay = (r.invoiceNumber+' '+(r.customer||'')+' '+saleItemLabel(r)+' '+(r.imei||'')).toLowerCase();
+    const matchesText = hay.includes(f);
+    const matchesMonth = !monthSel || r.date.slice(0,7)===monthSel;
+    return matchesText && matchesMonth;
+  }).sort((a,b)=> b.date.localeCompare(a.date) || b.saleId-a.saleId);
+
+  document.getElementById('nav-count-invoices').textContent = all.length;
+  document.getElementById('invoices-empty').style.display = rows.length? 'none':'block';
+  document.getElementById('invoices-body').innerHTML = rows.map(r=>`
+    <tr>
+      <td><span class="imei-chip">${r.invoiceNumber}</span></td>
+      <td>${saleItemLabel(r)}<div style="color:var(--text-faint); font-size:11px; font-family:var(--mono)">${r.imei||''}</div></td>
+      <td>${r.customer || '<span style="color:var(--text-faint)">—</span>'}</td>
+      <td><span style="font-size:12px; color:var(--text-dim)">${r.payment}</span></td>
+      <td style="font-family:var(--mono)">${fmt(r.salePrice)}${CUR()}</td>
+      <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
+      <td>
+        <div class="row-actions">
+          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
+          <button class="icon-btn danger" title="إلغاء الفاتورة (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+document.getElementById('invoices-search').addEventListener('input', e=> renderInvoices(e.target.value));
+document.getElementById('invoices-month-filter').addEventListener('change', ()=> renderInvoices(document.getElementById('invoices-search').value));
+document.getElementById('scan-invoices-search-btn').addEventListener('click', ()=>{
+  openBarcodeScanner((code)=>{
+    document.getElementById('invoices-search').value = code;
+    renderInvoices(code);
+  });
+});
+document.getElementById('invoices-body').addEventListener('click', e=>{
+  const printBtn = e.target.closest('[data-print]');
+  if(printBtn){
+    const saleId = Number(printBtn.dataset.print);
+    const row = allSaleItemsFlat().find(r=>r.saleId===saleId);
+    if(row) printInvoiceForRow(row);
+    return;
+  }
+  const btn = e.target.closest('[data-void]');
+  if(!btn) return;
+  const saleId = Number(btn.dataset.void);
+  const sale = state.sales.find(s=>s.id===saleId);
+  confirmAction(`هل تريد إلغاء الفاتورة <strong>${sale.invoiceNumber}</strong> وإرجاع الجهاز للمخزون؟`, ()=>{
+    sale.items.forEach(it=>{
+      if(state.units.some(u=>u.imei===it.imei)){
+        toast('تعذر الإرجاع — يوجد جهاز آخر بنفس الـ IMEI بالمخزون حاليا', true);
+        return;
+      }
+      let m = state.models.find(x=>x.id===it.modelId);
+      if(!m) m = findOrCreateModel(it.brand, it.model, it.color, it.storage, it.condition, 0);
+      state.units.push({
+        id: nextId.unit++, modelId:m.id, imei:it.imei, purchasePrice:it.costPrice,
+        batteryHealth: it.batteryHealth ?? null, note: it.note||'', supplier: it.supplier||'غير محدد',
+        purchaseDate: it.purchaseDate || todayISO(), status:'متوفر'
+      });
+    });
+    state.sales = state.sales.filter(s=>s.id!==saleId);
+    saveState();
+    renderInvoices(document.getElementById('invoices-search').value);
+    renderSalesHistory(document.getElementById('sales-search').value);
+    renderInventory(document.getElementById('inv-search').value);
+    renderDashboard();
+    toast('تم إلغاء الفاتورة وإرجاع الجهاز للمخزون');
   });
 });
 
@@ -2039,6 +2273,7 @@ async function boot(){
   renderInventory();
   renderPosDeviceGrid();
   renderSalesHistory();
+  renderInvoices();
   renderReports();
 }
 boot();
