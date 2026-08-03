@@ -589,11 +589,23 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         <span class="label">التقارير المالية</span>
       </button>
+      <button class="nav-btn" data-page="activity">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <span class="label">سجل النشاطات</span>
+        <span class="badge-count" id="nav-count-activity">0</span>
+      </button>
       <button class="nav-btn" data-page="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.16.55.6.98 1.56 1.04H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg>
         <span class="label">الإعدادات</span>
       </button>
     </nav>
+    <button type="button" id="current-user-switch" style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin:4px 2px 0; padding:9px 11px; background:var(--surface-2); border:1px solid var(--border); border-radius:9px; cursor:pointer; text-align:right; width:calc(100% - 4px);">
+      <span style="display:flex; align-items:center; gap:8px; min-width:0;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto; color:var(--accent-strong);"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1"/></svg>
+        <span id="current-user-label" style="font-family:var(--sans); font-size:12px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">اختر اسمك</span>
+      </span>
+      <span style="font-size:10px; color:var(--text-faint);">تبديل</span>
+    </button>
     <div class="sidebar-foot"><span>قاعدة بيانات سحابية</span><span><span class="live-dot" id="sync-dot"></span><span id="sync-label">متصل بالسحابة</span></span></div>
   </aside>
 
@@ -857,6 +869,33 @@
       </div>
     </section>
 
+    <!-- ============ ACTIVITY LOG ============ -->
+    <section class="page" id="page-activity">
+      <div class="page-head">
+        <div>
+          <div class="page-title">سجل النشاطات</div>
+          <div class="page-sub">كل حركة تصير بالنظام: منو ضاف، منو باع، منو حذف أو عدّل — بالتاريخ والوقت</div>
+        </div>
+      </div>
+      <div class="search-bar">
+        <div class="search-clear-wrap">
+          <input type="text" id="activity-search" placeholder="ابحث بالتفاصيل...">
+          <button type="button" class="search-clear-btn" id="clear-activity-search" title="مسح">✕</button>
+        </div>
+        <select id="activity-user-filter" style="flex:0 0 160px; max-width:160px;"><option value="">كل المستخدمين</option></select>
+        <select id="activity-action-filter" style="flex:0 0 170px; max-width:170px;"><option value="">كل الإجراءات</option></select>
+      </div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>الوقت</th><th>المستخدم</th><th>الإجراء</th><th>التفاصيل</th></tr></thead>
+          <tbody id="activity-body"></tbody>
+        </table>
+        </div>
+        <div class="empty" id="activity-empty" style="display:none;">ماكو نشاطات مسجلة بعد</div>
+      </div>
+    </section>
+
     <!-- ============ SETTINGS ============ -->
     <section class="page" id="page-settings">
       <div class="page-head">
@@ -875,6 +914,16 @@
               <div style="padding:10px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-dim); font-size:13.5px;">دينار عراقي (د.ع)</div>
             </div>
             <button type="submit" class="btn block">حفظ الإعدادات</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="card-head"><div class="card-title">المستخدمون <span>(تظهر أسماءهم بسجل النشاطات)</span></div></div>
+          <p class="hint" style="margin-bottom:14px;">أضف اسم كل شخص يستخدم النظام، حتى يختار اسمه عند الدخول وتنعرف كل حركة سواها.</p>
+          <div class="chip-row" id="user-manage-list"></div>
+          <form id="user-add-form" style="display:flex; gap:8px; margin-top:4px;">
+            <input id="new-user-name" placeholder="اسم المستخدم الجديد..." style="flex:1;">
+            <button type="submit" class="btn secondary" style="white-space:nowrap;">إضافة</button>
           </form>
         </div>
 
@@ -1005,12 +1054,13 @@ function defaultSettings(){
   return {
     shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice(),
     invoiceTagline:'', invoicePhones:'', invoiceAddress:'', invoiceSocial:'', invoiceTiktok:'', invoiceDelivery:'', warrantyDays: 10,
-    lastBackup: { weekly:null, monthly:null, yearly:null }
+    lastBackup: { weekly:null, monthly:null, yearly:null },
+    users: ['المستخدم 1','المستخدم 2']
   };
 }
 
-let nextId = { model:1, unit:1, sale:1, expense:1 };
-let state = { settings: defaultSettings(), models:[], units:[], sales:[], expenses:[] };
+let nextId = { model:1, unit:1, sale:1, expense:1, activity:1 };
+let state = { settings: defaultSettings(), models:[], units:[], sales:[], expenses:[], activity:[] };
 
 function setSyncStatus(connected){
   const dot = document.getElementById('sync-dot');
@@ -1028,12 +1078,12 @@ function setSyncStatus(connected){
    هذا يقلل استهلاك النقل (bandwidth) بشكل كبير مع نمو البيانات،
    بدون ما نغيّر أي مكان ثاني بالكود (saveState() تبقى تنادى نفس الطريقة).
    ============================================================ */
-const STATE_KEYS = ['settings','models','units','sales','expenses','nextId'];
-let lastKnownUpdatedAt = { settings:null, models:null, units:null, sales:null, expenses:null, nextId:null };
-let lastSavedJSON      = { settings:null, models:null, units:null, sales:null, expenses:null, nextId:null };
+const STATE_KEYS = ['settings','models','units','sales','expenses','activity','nextId'];
+let lastKnownUpdatedAt = { settings:null, models:null, units:null, sales:null, expenses:null, activity:null, nextId:null };
+let lastSavedJSON      = { settings:null, models:null, units:null, sales:null, expenses:null, activity:null, nextId:null };
 
 function currentSlices(){
-  return { settings: state.settings, models: state.models, units: state.units, sales: state.sales, expenses: state.expenses, nextId };
+  return { settings: state.settings, models: state.models, units: state.units, sales: state.sales, expenses: state.expenses, activity: state.activity, nextId };
 }
 
 async function saveState(){
@@ -1065,6 +1115,7 @@ function applyLoadedRows(rows){
   if(map.units)    state.units    = map.units.data    || [];
   if(map.sales)    state.sales    = map.sales.data    || [];
   if(map.expenses) state.expenses = map.expenses.data || [];
+  if(map.activity) state.activity = map.activity.data || [];
   if(map.nextId)   nextId = Object.assign(nextId, map.nextId.data || {});
   STATE_KEYS.forEach(key=>{
     if(map[key]){ lastKnownUpdatedAt[key] = map[key].updated_at; lastSavedJSON[key] = JSON.stringify(map[key].data); }
@@ -1080,6 +1131,7 @@ async function migrateOldBlobIfNeeded(){
     if(error || !old || !old.data || !old.data.state) return false;
     const s = Object.assign({ settings: defaultSettings() }, old.data.state);
     s.settings = Object.assign(defaultSettings(), s.settings);
+    s.activity = s.activity || [];
     const oldNextId = old.data.nextId || nextId;
     const ts = old.updated_at || new Date().toISOString();
     const rows = STATE_KEYS.map(key => ({ key, data: key==='nextId' ? oldNextId : s[key], updated_at: ts }));
@@ -1134,6 +1186,55 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) pullRem
 /* ============================================================
    أدوات مساعدة
    ============================================================ */
+/* ============================================================
+   المستخدم الحالي وسجل النشاطات
+   ============================================================ */
+function currentUserName(){ return sessionStorage.getItem('currentUserName') || ''; }
+function logActivity(action, details){
+  state.activity.unshift({
+    id: nextId.activity++,
+    ts: new Date().toISOString(),
+    user: currentUserName() || 'غير معروف',
+    action, details: details || ''
+  });
+  if(state.activity.length > 500) state.activity.length = 500;
+}
+function setCurrentUser(name){
+  sessionStorage.setItem('currentUserName', name);
+  const el = document.getElementById('current-user-label');
+  if(el) el.textContent = name;
+}
+function openUserPickerModal(){
+  const users = (state.settings.users && state.settings.users.length) ? state.settings.users : ['مستخدم 1','مستخدم 2'];
+  const html = `
+    <p style="color:var(--text-dim); font-size:13px; margin-bottom:14px;">حدد اسمك حتى يظهر بسجل النشاطات مع كل حركة تسويها (إضافة، بيع، حذف...).</p>
+    <div class="field"><label>اختر اسمك</label>
+      <div class="chip-row" id="user-pick-chips">
+        ${users.map(u=>`<button type="button" class="chip-opt" data-user="${u}">${u}</button>`).join('')}
+      </div>
+    </div>
+    <div class="field"><label>أو اكتب اسم آخر</label><input id="user-pick-custom" placeholder="الاسم..."></div>
+    <button type="button" class="btn block" id="user-pick-confirm">تأكيد</button>
+  `;
+  openModal('من أنت؟', html);
+  document.getElementById('user-pick-chips').addEventListener('click', e=>{
+    const b = e.target.closest('[data-user]'); if(!b) return;
+    document.getElementById('user-pick-custom').value = b.dataset.user;
+  });
+  document.getElementById('user-pick-confirm').addEventListener('click', ()=>{
+    const name = document.getElementById('user-pick-custom').value.trim();
+    if(!name){ toast('اختر أو اكتب اسمك أولا', true); return; }
+    setCurrentUser(name);
+    closeModal();
+    toast('تم تسجيل الدخول باسم ' + name + ' ✓');
+  });
+}
+function ensureCurrentUser(){
+  const el = document.getElementById('current-user-label');
+  if(el) el.textContent = currentUserName() || 'اختر اسمك';
+  if(!currentUserName()){ openUserPickerModal(); }
+}
+
 function fmt(n){ return Number(n||0).toLocaleString('en-US'); }
 function CUR(){ return 'د.ع'; }
 function todayISO(){ return new Date().toISOString().slice(0,10); }
@@ -1422,6 +1523,7 @@ function renderAll(pageName){
   if(pageName==='sales') renderSalesHistory(document.getElementById('sales-search')?.value || '');
   if(pageName==='invoices') renderInvoices(document.getElementById('invoices-search')?.value || '');
   if(pageName==='reports') renderReports();
+  if(pageName==='activity') renderActivityLog();
   if(pageName==='settings') renderSettings();
 }
 
@@ -1662,11 +1764,13 @@ function wireDeviceForm(existingUnitId){
       unit.batteryHealth = batteryHealth;
       unit.supplier = supplier;
       unit.note = note;
+      logActivity('تعديل جهاز', `${unitLabel(unit)} · IMEI ${imei}`);
       toast('تم تحديث بيانات الجهاز ✓');
     } else {
       const m = findOrCreateModel(brand, model, color, storage, selectedCondition, salePrice);
       m.defaultPrice = salePrice;
       state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate, supplier, note, status:'متوفر' });
+      logActivity('إضافة جهاز', `${brand} ${model} · ${color||''} ${storage||''} · IMEI ${imei} · شراء ${fmt(purchase)}${CUR()}`);
       toast('تمت إضافة الجهاز إلى المخزن ✓');
     }
     saveState();
@@ -1782,12 +1886,16 @@ document.getElementById('inventory-body').addEventListener('click', e=>{
   const delBtn = e.target.closest('[data-del]');
   if(holdBtn){
     const u = state.units.find(x=>x.id===Number(holdBtn.dataset.hold));
-    u.status = 'محجوز'; saveState(); renderInventory(document.getElementById('inv-search').value); renderDashboard();
+    u.status = 'محجوز';
+    logActivity('تعليق جهاز', `${unitLabel(u)} · IMEI ${u.imei}`);
+    saveState(); renderInventory(document.getElementById('inv-search').value); renderDashboard();
     toast('تم تعليق الجهاز مؤقتا');
   }
   if(unholdBtn){
     const u = state.units.find(x=>x.id===Number(unholdBtn.dataset.unhold));
-    u.status = 'متوفر'; saveState(); renderInventory(document.getElementById('inv-search').value); renderDashboard();
+    u.status = 'متوفر';
+    logActivity('إلغاء تعليق جهاز', `${unitLabel(u)} · IMEI ${u.imei}`);
+    saveState(); renderInventory(document.getElementById('inv-search').value); renderDashboard();
     toast('الجهاز متوفر الآن');
   }
   if(editBtn) openEditDeviceModal(Number(editBtn.dataset.edit));
@@ -1795,6 +1903,7 @@ document.getElementById('inventory-body').addEventListener('click', e=>{
     const id = Number(delBtn.dataset.del);
     const u = state.units.find(x=>x.id===id);
     confirmAction(`هل تريد حذف الجهاز <strong>${unitLabel(u)}</strong> نهائيا من المخزون؟`, ()=>{
+      logActivity('حذف جهاز', `${unitLabel(u)} · IMEI ${u.imei}`);
       state.units = state.units.filter(x=>x.id!==id);
       saveState();
       renderInventory(document.getElementById('inv-search').value);
@@ -1948,6 +2057,7 @@ document.getElementById('pos-form').addEventListener('submit', e=>{
   state.sales.push(sale);
   /* الجهاز ينحذف من المخزون فعليا وينتقل بكل تفاصيله لسجل المبيعات */
   state.units = state.units.filter(u=>u.id!==posSelectedUnit.id);
+  logActivity('بيع جهاز', `${unitLabel(posSelectedUnit)} · IMEI ${posSelectedUnit.imei} · فاتورة ${sale.invoiceNumber} · بسعر ${fmt(price-discount)}${CUR()}${customer? ' · الزبون '+customer : ''}`);
   saveState();
 
   const profit = (price-discount) - posSelectedUnit.purchasePrice;
@@ -2055,6 +2165,7 @@ document.getElementById('sales-body').addEventListener('click', e=>{
         purchaseDate: it.purchaseDate || todayISO(), status:'متوفر'
       });
     });
+    logActivity('إلغاء بيع', `فاتورة ${sale.invoiceNumber} · ${sale.items.map(saleItemLabel).join(', ')}`);
     state.sales = state.sales.filter(s=>s.id!==saleId);
     saveState();
     renderSalesHistory(document.getElementById('sales-search').value);
@@ -2137,6 +2248,7 @@ document.getElementById('expense-form').addEventListener('submit', e=>{
   const description = document.getElementById('ex-desc').value.trim();
   const amount = Number(document.getElementById('ex-amount').value);
   state.expenses.push({ id: nextId.expense++, category, description, amount, date: todayISO() });
+  logActivity('تسجيل مصروف', `${category}${description? ' · '+description : ''} · ${fmt(amount)}${CUR()}`);
   saveState();
   e.target.reset();
   renderReports();
@@ -2165,8 +2277,42 @@ function renderSettings(){
     ? 'قفل التطبيق مفعل حاليا 🔒'
     : 'قفل التطبيق غير مفعل حاليا';
   renderBrandManageList();
+  renderUserManageList();
   renderBackupStatus();
 }
+function renderUserManageList(){
+  const list = document.getElementById('user-manage-list');
+  const users = (state.settings.users && state.settings.users.length) ? state.settings.users : [];
+  list.innerHTML = users.length ? users.map(u=>`
+    <span class="chip-opt selected" style="display:inline-flex; align-items:center; gap:7px;">
+      ${u}
+      <button type="button" class="user-del-btn" data-user="${u}" style="background:none; border:none; color:inherit; cursor:pointer; font-size:14px; line-height:1; padding:0;">×</button>
+    </span>
+  `).join('') : '<span class="page-sub">لا يوجد مستخدمون مضافون</span>';
+}
+document.getElementById('user-manage-list').addEventListener('click', e=>{
+  const btn = e.target.closest('[data-user]'); if(!btn) return;
+  const name = btn.dataset.user;
+  confirmAction(`حذف المستخدم ${name} من القائمة؟`, ()=>{
+    state.settings.users = (state.settings.users||[]).filter(u=>u!==name);
+    saveState();
+    renderUserManageList();
+    toast('تم حذف المستخدم ✓');
+  });
+});
+document.getElementById('user-add-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const input = document.getElementById('new-user-name');
+  const name = input.value.trim();
+  if(!name){ toast('اكتب اسم المستخدم أولا', true); return; }
+  const users = state.settings.users || [];
+  if(users.some(u=>u.toLowerCase()===name.toLowerCase())){ toast('هذا المستخدم موجود مسبقا', true); return; }
+  state.settings.users = [...users, name];
+  saveState();
+  renderUserManageList();
+  input.value = '';
+  toast('تمت إضافة المستخدم ✓');
+});
 function renderBrandManageList(){
   const list = document.getElementById('brand-manage-list');
   const brands = androidBrands();
@@ -2182,6 +2328,7 @@ document.getElementById('brand-manage-list').addEventListener('click', e=>{
   const name = btn.dataset.brand;
   confirmAction(`حذف شركة ${name} من القائمة؟`, ()=>{
     state.settings.androidBrands = androidBrands().filter(b=>b!==name);
+    logActivity('حذف شركة', name);
     saveState();
     renderBrandManageList();
     toast('تم حذف الشركة ✓');
@@ -2195,6 +2342,7 @@ document.getElementById('brand-add-form').addEventListener('submit', e=>{
   const brands = androidBrands();
   if(brands.some(b=>b.toLowerCase()===name.toLowerCase())){ toast('هذه الشركة موجودة مسبقا', true); return; }
   state.settings.androidBrands = [...brands, name];
+  logActivity('إضافة شركة', name);
   saveState();
   renderBrandManageList();
   input.value = '';
@@ -2204,6 +2352,7 @@ document.getElementById('settings-form').addEventListener('submit', e=>{
   e.preventDefault();
   state.settings.shopName = document.getElementById('set-shop-name').value.trim() || 'علي فون';
   state.settings.currency = 'د.ع';
+  logActivity('تعديل إعدادات المحل', 'اسم المحل: ' + state.settings.shopName);
   saveState();
   applyShopNameToUi();
   renderDashboard();
@@ -2219,6 +2368,7 @@ document.getElementById('invoice-settings-form').addEventListener('submit', e=>{
   state.settings.invoiceDelivery = document.getElementById('set-invoice-delivery').value.trim();
   const days = Number(document.getElementById('set-invoice-warranty-days').value);
   state.settings.warrantyDays = Number.isFinite(days) && days>=0 ? days : 10;
+  logActivity('تعديل إعدادات الفاتورة', '');
   saveState();
   toast('تم حفظ إعدادات الفاتورة ✓');
 });
@@ -2228,6 +2378,7 @@ document.getElementById('pin-form').addEventListener('submit', e=>{
   const confirmPin = document.getElementById('set-pin-confirm').value.trim();
   if(!pin){
     state.settings.pinCode = '';
+    logActivity('إلغاء قفل التطبيق', '');
     saveState();
     sessionStorage.removeItem('appUnlocked');
     renderSettings();
@@ -2244,6 +2395,7 @@ document.getElementById('pin-form').addEventListener('submit', e=>{
     return;
   }
   state.settings.pinCode = pin;
+  logActivity('تفعيل/تغيير قفل التطبيق', '');
   saveState();
   renderSettings();
   document.getElementById('pin-form').reset();
@@ -2429,8 +2581,10 @@ document.getElementById('btn-import').addEventListener('change', e=>{
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
   confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', ()=>{
-    state = { settings: { ...state.settings }, models:[], units:[], sales:[], expenses:[] };
-    nextId = { model:1, unit:1, sale:1, expense:1 };
+    const keepActivity = state.activity;
+    state = { settings: { ...state.settings }, models:[], units:[], sales:[], expenses:[], activity: keepActivity };
+    nextId = { ...nextId, model:1, unit:1, sale:1, expense:1 };
+    logActivity('تصفير كامل البيانات', 'حذف كل المخزون والمبيعات والمصاريف');
     saveState();
     applyShopNameToUi();
     renderAll('dashboard');
@@ -2506,6 +2660,7 @@ document.getElementById('invoices-body').addEventListener('click', e=>{
         purchaseDate: it.purchaseDate || todayISO(), status:'متوفر'
       });
     });
+    logActivity('إلغاء فاتورة', `فاتورة ${sale.invoiceNumber} · ${sale.items.map(saleItemLabel).join(', ')}`);
     state.sales = state.sales.filter(s=>s.id!==saleId);
     saveState();
     renderInvoices(document.getElementById('invoices-search').value);
@@ -2515,6 +2670,54 @@ document.getElementById('invoices-body').addEventListener('click', e=>{
     toast('تم إلغاء الفاتورة وإرجاع الجهاز للمخزون');
   });
 });
+
+/* ============================================================
+   سجل النشاطات
+   ============================================================ */
+function activityTimeLabel(iso){
+  const d = new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.toLocaleString('ar-IQ', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function renderActivityLog(){
+  const searchVal = (document.getElementById('activity-search')?.value || '').trim().toLowerCase();
+  const userSel = document.getElementById('activity-user-filter').value;
+  const actionSel = document.getElementById('activity-action-filter').value;
+
+  const users = [...new Set(state.activity.map(a=>a.user))].sort();
+  const uSel = document.getElementById('activity-user-filter');
+  const uCurrent = uSel.value;
+  uSel.innerHTML = '<option value="">كل المستخدمين</option>' + users.map(u=>`<option value="${u}">${u}</option>`).join('');
+  if(users.includes(uCurrent)) uSel.value = uCurrent;
+
+  const actions = [...new Set(state.activity.map(a=>a.action))].sort();
+  const aSel = document.getElementById('activity-action-filter');
+  const aCurrent = aSel.value;
+  aSel.innerHTML = '<option value="">كل الإجراءات</option>' + actions.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(actions.includes(aCurrent)) aSel.value = aCurrent;
+
+  const rows = state.activity.filter(a=>{
+    const hay = (a.action+' '+a.user+' '+a.details).toLowerCase();
+    const matchesText = !searchVal || hay.includes(searchVal);
+    const matchesUser = !userSel || a.user===userSel;
+    const matchesAction = !actionSel || a.action===actionSel;
+    return matchesText && matchesUser && matchesAction;
+  });
+
+  document.getElementById('nav-count-activity').textContent = state.activity.length;
+  document.getElementById('activity-empty').style.display = rows.length ? 'none' : 'block';
+  document.getElementById('activity-body').innerHTML = rows.map(a=>`
+    <tr>
+      <td style="color:var(--text-faint); font-size:12px; white-space:nowrap; font-family:var(--mono)">${activityTimeLabel(a.ts)}</td>
+      <td style="font-weight:600;">${a.user}</td>
+      <td><span class="badge hold"><span class="dot"></span>${a.action}</span></td>
+      <td style="color:var(--text-dim);">${a.details || ''}</td>
+    </tr>`).join('');
+}
+document.getElementById('activity-search').addEventListener('input', renderActivityLog);
+document.getElementById('activity-user-filter').addEventListener('change', renderActivityLog);
+document.getElementById('activity-action-filter').addEventListener('change', renderActivityLog);
+document.getElementById('current-user-switch').addEventListener('click', openUserPickerModal);
 
 /* ============================================================
    أزرار مسح حقول البحث (X)
@@ -2535,6 +2738,7 @@ function wireSearchClear(inputId, btnId){
 wireSearchClear('inv-search', 'clear-inv-search');
 wireSearchClear('sales-search', 'clear-sales-search');
 wireSearchClear('invoices-search', 'clear-invoices-search');
+wireSearchClear('activity-search', 'clear-activity-search');
 wireSearchClear('pos-device-search', 'clear-pos-device-search');
 wireSearchClear('pos-imei', 'clear-pos-imei');
 
@@ -2562,6 +2766,7 @@ document.getElementById('lock-form').addEventListener('submit', e=>{
   if(entered && entered === state.settings.pinCode){
     sessionStorage.setItem('appUnlocked','1');
     document.getElementById('lock-overlay').style.display = 'none';
+    ensureCurrentUser();
   } else {
     document.getElementById('lock-error').style.display = 'block';
     document.getElementById('lock-pin-input').value = '';
@@ -2580,6 +2785,8 @@ async function boot(){
   renderSalesHistory();
   renderInvoices();
   renderReports();
+  renderActivityLog();
+  ensureCurrentUser();
 }
 document.querySelectorAll('.app-logo-img').forEach(img=>{ img.src = LOGO_DATA_URI; });
 boot();
