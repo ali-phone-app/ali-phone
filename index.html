@@ -1316,7 +1316,12 @@ function unitLabel(unit){
   return `${m.brand} ${m.model} · ${m.color||''} ${m.storage||''} · ${m.condition}`;
 }
 function saleItemLabel(it){
-  return `${it.brand||''} ${it.model||''} · ${it.color||''} ${it.storage||''} · ${it.condition||''}`;
+  let brand = it.brand, model = it.model, color = it.color, storage = it.storage, condition = it.condition;
+  if(!brand && !model && it.modelId!=null){
+    const m = state.models.find(x=>x.id===it.modelId);
+    if(m){ brand = m.brand; model = m.model; color = color || m.color; storage = storage || m.storage; condition = condition || m.condition; }
+  }
+  return `${brand||''} ${model||''} · ${color||''} ${storage||''} · ${condition||''}`;
 }
 function formatDateDMY(iso){
   if(!iso) return '';
@@ -1475,6 +1480,12 @@ function printInvoiceForRow(row){
   sheet.className = 'invoice-sheet inv2-mode';
   sheet.innerHTML = buildInvoiceHTML(row);
   window.print();
+}
+function findSaleRowForPrint(saleId, unitId, imei){
+  const all = allSaleItemsFlat();
+  return (unitId!=null && !Number.isNaN(unitId) ? all.find(r=>r.saleId===saleId && r.unitId===unitId) : null)
+    || (imei ? all.find(r=>r.saleId===saleId && r.imei===imei) : null)
+    || all.find(r=>r.saleId===saleId);
 }
 function allSaleItemsFlat(){
   const rows = [];
@@ -2180,7 +2191,7 @@ function renderSalesHistory(filter=''){
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
       <td>
         <div class="row-actions">
-          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
+          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}" data-unit="${r.unitId ?? ''}" data-imei="${r.imei || ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
           <button class="icon-btn danger" title="إلغاء البيع (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
         </div>
       </td>
@@ -2198,7 +2209,8 @@ document.getElementById('sales-body').addEventListener('click', e=>{
   const printBtn = e.target.closest('[data-print]');
   if(printBtn){
     const saleId = Number(printBtn.dataset.print);
-    const row = allSaleItemsFlat().find(r=>r.saleId===saleId);
+    const unitId = printBtn.dataset.unit ? Number(printBtn.dataset.unit) : null;
+    const row = findSaleRowForPrint(saleId, unitId, printBtn.dataset.imei || '');
     if(row) printInvoiceForRow(row);
     return;
   }
@@ -2787,7 +2799,7 @@ function renderInvoices(filter=''){
       <td style="color:var(--text-faint); font-size:12px;">${r.date}</td>
       <td>
         <div class="row-actions">
-          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
+          <button class="icon-btn" title="طباعة الفاتورة" data-print="${r.saleId}" data-unit="${r.unitId ?? ''}" data-imei="${r.imei || ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8Z"/></svg></button>
           <button class="icon-btn danger" title="إلغاء الفاتورة (إرجاع للمخزون)" data-void="${r.saleId}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
         </div>
       </td>
@@ -2805,7 +2817,8 @@ document.getElementById('invoices-body').addEventListener('click', e=>{
   const printBtn = e.target.closest('[data-print]');
   if(printBtn){
     const saleId = Number(printBtn.dataset.print);
-    const row = allSaleItemsFlat().find(r=>r.saleId===saleId);
+    const unitId = printBtn.dataset.unit ? Number(printBtn.dataset.unit) : null;
+    const row = findSaleRowForPrint(saleId, unitId, printBtn.dataset.imei || '');
     if(row) printInvoiceForRow(row);
     return;
   }
