@@ -1165,6 +1165,12 @@ async function migrateOldBlobIfNeeded(){
   }catch(e){ return false; }
 }
 
+/* ترجع واحدة من ثلاث حالات، لازم نفرّق بينها بدقة:
+   'has-data' -> تم تحميل بيانات فعلية (أو تم ترحيلها) بنجاح
+   'empty'    -> الاتصال نجح فعلاً، وقاعدة البيانات فعلاً فاضية (أول استخدام حقيقي)
+   'error'    -> صار خطأ بالاتصال/الطلب — لا نعرف هل البيانات موجودة أو لا،
+                 فيجب ألا نتعامل معها كأنها فاضية أبدًا (تجنبًا لمسح البيانات
+                 الحقيقية بقاعدة البيانات عن طريق الخطأ). */
 async function loadState(){
   try{
     const { data, error } = await sb.from('app_data').select('key, data, updated_at');
@@ -1172,14 +1178,14 @@ async function loadState(){
     setSyncStatus(true);
     if(!data || data.length === 0){
       const migrated = await migrateOldBlobIfNeeded();
-      return migrated;
+      return migrated ? 'has-data' : 'empty';
     }
     applyLoadedRows(data);
-    return true;
+    return 'has-data';
   }catch(e){
     console.warn('تعذر تحميل البيانات من قاعدة البيانات', e);
     setSyncStatus(false);
-    return false;
+    return 'error';
   }
 }
 
@@ -2796,8 +2802,22 @@ document.getElementById('lock-form').addEventListener('submit', e=>{
 });
 
 async function boot(){
-  const hadSavedData = await loadState();
-  if(!hadSavedData){ await saveState(); }
+  let loadResult = await loadState();
+  if(loadResult === 'error'){
+    // ما نستسلم من أول محاولة — ممكن يكون تقطيع نت لحظي وقت فتح الصفحة.
+    // نعيد المحاولة مرة وحدة بعد فترة قصيرة قبل ما نقرر أي شي.
+    await new Promise(r=> setTimeout(r, 1500));
+    loadResult = await loadState();
+  }
+  if(loadResult === 'empty'){
+    // أول استخدام حقيقي وموثوق (الاتصال نجح والقاعدة فعلاً فاضية) — نهيئها.
+    await saveState();
+  } else if(loadResult === 'error'){
+    // فشل التحميل مرتين — لا نعرف حالة البيانات الحقيقية بقاعدة البيانات،
+    // فلا نسوي saveState() إطلاقاً حتى ما نخاطر بمسح بيانات موجودة فعلاً.
+    // نبقي واجهة فاضية مؤقتاً ونحذر المستخدم بدل ما نمسح شي بصمت.
+    toast('تعذر تحميل بياناتك من الإنترنت — تحقق من الاتصال وأعد فتح الصفحة قبل إضافة أي شي جديد', true);
+  }
   checkAppLock();
   applyShopNameToUi();
   renderDashboard();
