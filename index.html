@@ -1778,7 +1778,7 @@ function wireDeviceForm(existingUnitId){
     if(existingUnitId){
       const unit = state.units.find(u=>u.id===existingUnitId);
       const m = findOrCreateModel(brand, model, color, storage, selectedCondition, salePrice);
-      m.defaultPrice = salePrice;
+      if(salePrice > 0) m.defaultPrice = salePrice;
       unit.modelId = m.id;
       unit.purchasePrice = purchase;
       unit.purchaseDate = purchaseDate;
@@ -1789,7 +1789,7 @@ function wireDeviceForm(existingUnitId){
       toast('تم تحديث بيانات الجهاز ✓');
     } else {
       const m = findOrCreateModel(brand, model, color, storage, selectedCondition, salePrice);
-      m.defaultPrice = salePrice;
+      if(salePrice > 0) m.defaultPrice = salePrice;
       state.units.push({ id: nextId.unit++, modelId:m.id, imei, purchasePrice:purchase, batteryHealth, purchaseDate, supplier, note, status:'متوفر' });
       logActivity('إضافة جهاز', `${brand} ${model} · ${color||''} ${storage||''} · IMEI ${imei} · شراء ${fmt(purchase)}${CUR()}`);
       toast('تمت إضافة الجهاز إلى المخزن ✓');
