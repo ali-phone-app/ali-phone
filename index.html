@@ -1095,6 +1095,27 @@ async function saveState(){
     if(json !== lastSavedJSON[key]) rows.push({ key, data: slices[key], updated_at: ts, __json: json });
   }
   if(rows.length === 0){ setSyncStatus(true); return; } // ماكو شي تغيّر — ما نرسل شي
+
+  /* فحص أمان قبل الحفظ (optimistic concurrency):
+     نتأكد إن آخر updated_at المخزون بالسيرفر لهذي الأجزاء لسا نفسه اللي نعرفه
+     محليًا. إذا جهاز/تبويب ثاني حفظ بعدنا (مثلا باع جهاز)، ما نكتب فوق
+     التغيير هذا بنسخة قديمة — نسحب أحدث بيانات أول ونلغي هذا الحفظ، وبعدين
+     المستخدم يعيد الإجراء (أو يتكرر تلقائيًا بالمزامنة الدورية). هذا يمنع
+     رجوع أجهزة مباعة للمخزون بسبب تعارض كتابة بين جهازين. */
+  try{
+    const keysToCheck = rows.map(r=>r.key);
+    const { data: remoteMeta, error: metaErr } = await sb.from('app_data').select('key, updated_at').in('key', keysToCheck);
+    if(!metaErr && remoteMeta){
+      const stale = remoteMeta.some(r => lastKnownUpdatedAt[r.key] && r.updated_at && r.updated_at !== lastKnownUpdatedAt[r.key]);
+      if(stale){
+        await pullRemoteChanges();
+        setSyncStatus(true);
+        toast('تم تحديث البيانات من جهاز آخر بنفس اللحظة — تأكد من آخر إجراء وأعده إذا يلزم', true);
+        return;
+      }
+    }
+  }catch(e){ /* إذا فشل فحص التعارض (شبكة مثلا)، نكمل الحفظ العادي بدل ما نعلّق التطبيق */ }
+
   try{
     const { error } = await sb.from('app_data').upsert(rows.map(({key,data,updated_at})=>({key,data,updated_at})));
     if(error) throw error;
