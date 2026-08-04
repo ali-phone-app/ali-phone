@@ -1086,7 +1086,7 @@ function currentSlices(){
   return { settings: state.settings, models: state.models, units: state.units, sales: state.sales, expenses: state.expenses, activity: state.activity, nextId };
 }
 
-async function saveState(){
+async function saveState(force=false){
   const slices = currentSlices();
   const ts = new Date().toISOString();
   const rows = [];
@@ -1101,20 +1101,25 @@ async function saveState(){
      محليًا. إذا جهاز/تبويب ثاني حفظ بعدنا (مثلا باع جهاز)، ما نكتب فوق
      التغيير هذا بنسخة قديمة — نسحب أحدث بيانات أول ونلغي هذا الحفظ، وبعدين
      المستخدم يعيد الإجراء (أو يتكرر تلقائيًا بالمزامنة الدورية). هذا يمنع
-     رجوع أجهزة مباعة للمخزون بسبب تعارض كتابة بين جهازين. */
-  try{
-    const keysToCheck = rows.map(r=>r.key);
-    const { data: remoteMeta, error: metaErr } = await sb.from('app_data').select('key, updated_at').in('key', keysToCheck);
-    if(!metaErr && remoteMeta){
-      const stale = remoteMeta.some(r => lastKnownUpdatedAt[r.key] && r.updated_at && r.updated_at !== lastKnownUpdatedAt[r.key]);
-      if(stale){
-        await pullRemoteChanges();
-        setSyncStatus(true);
-        toast('تم تحديث البيانات من جهاز آخر بنفس اللحظة — تأكد من آخر إجراء وأعده إذا يلزم', true);
-        return;
+     رجوع أجهزة مباعة للمخزون بسبب تعارض كتابة بين جهازين.
+     ملاحظة: عند force=true (مثلا استيراد نسخة احتياطية أو تصفير كامل)،
+     المستخدم قاصد فعلاً استبدال كل شي بغض النظر عن أي تغيير بجهاز ثاني،
+     فنتخطى هذا الفحص بدل ما نسمح له يلغي عملية الاستيراد بصمت. */
+  if(!force){
+    try{
+      const keysToCheck = rows.map(r=>r.key);
+      const { data: remoteMeta, error: metaErr } = await sb.from('app_data').select('key, updated_at').in('key', keysToCheck);
+      if(!metaErr && remoteMeta){
+        const stale = remoteMeta.some(r => lastKnownUpdatedAt[r.key] && r.updated_at && r.updated_at !== lastKnownUpdatedAt[r.key]);
+        if(stale){
+          await pullRemoteChanges();
+          setSyncStatus(true);
+          toast('تم تحديث البيانات من جهاز آخر بنفس اللحظة — تأكد من آخر إجراء وأعده إذا يلزم', true);
+          return;
+        }
       }
-    }
-  }catch(e){ /* إذا فشل فحص التعارض (شبكة مثلا)، نكمل الحفظ العادي بدل ما نعلّق التطبيق */ }
+    }catch(e){ /* إذا فشل فحص التعارض (شبكة مثلا)، نكمل الحفظ العادي بدل ما نعلّق التطبيق */ }
+  }
 
   try{
     const { error } = await sb.from('app_data').upsert(rows.map(({key,data,updated_at})=>({key,data,updated_at})));
@@ -2590,10 +2595,13 @@ document.getElementById('btn-import').addEventListener('change', e=>{
     try{
       const parsed = JSON.parse(reader.result);
       if(!parsed.state) throw new Error('bad file');
-      confirmAction('استيراد هذا الملف سيستبدل كل البيانات الحالية. متابعة؟', ()=>{
+      confirmAction('استيراد هذا الملف سيستبدل كل البيانات الحالية. متابعة؟', async ()=>{
         state = parsed.state;
         nextId = parsed.nextId || nextId;
-        saveState();
+        // نفرض الحفظ (force=true) لأن المستخدم قاصد فعلاً استبدال كل شي —
+        // ما نريد فحص التعارض يلغي الاستيراد بصمت لو جهاز ثاني عدّل أي شي.
+        // ننتظر (await) نتيجة الحفظ الفعلي قبل ما نقول "تم بنجاح".
+        await saveState(true);
         applyShopNameToUi();
         renderAll(document.querySelector('.nav-btn.active').dataset.page);
         toast('تم استيراد البيانات بنجاح ✓');
@@ -2607,12 +2615,12 @@ document.getElementById('btn-import').addEventListener('change', e=>{
 });
 
 document.getElementById('btn-reset').addEventListener('click', ()=>{
-  confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', ()=>{
+  confirmAction('سيتم حذف جميع بيانات المخزون والمبيعات والمصاريف نهائيا من قاعدة البيانات على كل الأجهزة. هل أنت متأكد؟', async ()=>{
     const keepActivity = state.activity;
     state = { settings: { ...state.settings }, models:[], units:[], sales:[], expenses:[], activity: keepActivity };
     nextId = { ...nextId, model:1, unit:1, sale:1, expense:1 };
     logActivity('تصفير كامل البيانات', 'حذف كل المخزون والمبيعات والمصاريف');
-    saveState();
+    await saveState(true);
     applyShopNameToUi();
     renderAll('dashboard');
     goToPage('dashboard');
