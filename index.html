@@ -248,6 +248,7 @@
   .main, .two-col, .two-col > *, .card{ min-width:0; }
 
   .mobile-topbar{ display:none; }
+  .mobile-user-btn{ display:none; }
 
   /* ===== Device picker (POS) ===== */
   .device-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; max-height:300px; overflow-y:auto; padding-left:2px; }
@@ -305,6 +306,17 @@
     .mobile-topbar .brand{ padding:0; }
     .mobile-topbar .brand-chip{ width:44px; height:44px; }
     .mobile-topbar .brand-name{ font-size:14px; }
+
+    .mobile-user-btn{
+      display:flex; align-items:center; gap:6px; flex:0 1 auto; min-width:0;
+      background:var(--surface-2); border:1px solid var(--border); border-radius:20px;
+      padding:8px 12px; color:var(--text); cursor:pointer;
+    }
+    .mobile-user-btn svg{ flex:0 0 auto; color:var(--accent-strong); }
+    .mobile-user-btn span{ font-size:12px; font-weight:600; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+    /* بار المستخدم الأصلي (بالسايدبار) يتعارض مع شريط التنقل السفلي بالموبايل، فتخفى ونعتمد الزر المدمج بالأعلى */
+    #current-user-switch{ display:none !important; }
 
     .sidebar{
       order:2; width:100%; flex-basis:auto; height:auto;
@@ -553,6 +565,10 @@
       <div class="brand-chip"><img class="app-logo-img" alt="شعار علي فون"></div>
       <div class="brand-name" id="mobile-shop-name">علي فون</div>
     </div>
+    <button type="button" id="mobile-user-switch" class="mobile-user-btn" title="تبديل المستخدم">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1"/></svg>
+      <span id="mobile-user-label">اختر اسمك</span>
+    </button>
   </div>
   <aside class="sidebar">
     <div class="brand">
@@ -580,19 +596,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h12v19l-3-2-3 2-3-2-3 2V2Z"/><path d="M9 8h6M9 12h6"/></svg>
         <span class="label">سجل المبيعات</span>
       </button>
-      <button class="nav-btn" data-page="invoices">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16l3-1.5 3 1.5 3-1.5 3 1.5V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M8 13h6M8 17h4"/></svg>
-        <span class="label">الفواتير</span>
-        <span class="badge-count" id="nav-count-invoices">0</span>
-      </button>
       <button class="nav-btn" data-page="reports">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         <span class="label">التقارير المالية</span>
-      </button>
-      <button class="nav-btn" data-page="activity">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-        <span class="label">سجل النشاطات</span>
-        <span class="badge-count" id="nav-count-activity">0</span>
       </button>
       <button class="nav-btn" data-page="settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.16.55.6.98 1.56 1.04H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15Z"/></svg>
@@ -901,20 +907,29 @@
       <div class="page-head">
         <div>
           <div class="page-title">الإعدادات</div>
-          <div class="page-sub">بيانات المحل والنسخ الاحتياطي</div>
+          <div class="page-sub">المستخدمون والنسخ الاحتياطي</div>
         </div>
       </div>
 
       <div class="two-col">
         <div class="card">
-          <div class="card-head"><div class="card-title">بيانات المحل</div></div>
-          <form id="settings-form">
-            <div class="field"><label>اسم المحل</label><input id="set-shop-name" placeholder="علي فون"></div>
-            <div class="field"><label>العملة</label>
-              <div style="padding:10px 14px; background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-dim); font-size:13.5px;">دينار عراقي (د.ع)</div>
-            </div>
-            <button type="submit" class="btn block">حفظ الإعدادات</button>
-          </form>
+          <div class="card-head"><div class="card-title">الوصول السريع</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button type="button" class="btn secondary block" data-nav="invoices" style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="display:flex; align-items:center; gap:9px;">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16l3-1.5 3 1.5 3-1.5 3 1.5V8l-6-6Z"/><path d="M14 2v6h6"/><path d="M8 13h6M8 17h4"/></svg>
+                الفواتير
+              </span>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <button type="button" class="btn secondary block" data-nav="activity" style="display:flex; align-items:center; justify-content:space-between;">
+              <span style="display:flex; align-items:center; gap:9px;">
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+                سجل النشاطات
+              </span>
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
         </div>
 
         <div class="card">
@@ -924,21 +939,6 @@
           <form id="user-add-form" style="display:flex; gap:8px; margin-top:4px;">
             <input id="new-user-name" placeholder="اسم المستخدم الجديد..." style="flex:1;">
             <button type="submit" class="btn secondary" style="white-space:nowrap;">إضافة</button>
-          </form>
-        </div>
-
-        <div class="card">
-          <div class="card-head"><div class="card-title">إعدادات الفاتورة</div></div>
-          <p class="hint" style="margin-bottom:14px;">هذي البيانات تظهر بالفاتورة المطبوعة اللي تنطبع للزبون.</p>
-          <form id="invoice-settings-form">
-            <div class="field"><label>الوصف المختصر (تحت اسم المحل)</label><input id="set-invoice-tagline" placeholder="كل ما تحتاج هنا واكثر"></div>
-            <div class="field"><label>أرقام الهاتف</label><input id="set-invoice-phones" placeholder="07735092960 - 07739844226"></div>
-            <div class="field"><label>العنوان</label><input id="set-invoice-address" placeholder="البصرة - الطويسه - شارع السوق الجديد"></div>
-            <div class="field"><label>حساب انستغرام</label><input id="set-invoice-social" placeholder="@_3k3a"></div>
-            <div class="field"><label>حساب تيك توك</label><input id="set-invoice-tiktok" placeholder="alipoin"></div>
-            <div class="field"><label>ملاحظة التوصيل</label><input id="set-invoice-delivery" placeholder="التوصيل متاح لكل محافظات العراق"></div>
-            <div class="field"><label>مدة الضمان (بالأيام)</label><input type="number" min="0" id="set-invoice-warranty-days" placeholder="10"></div>
-            <button type="submit" class="btn block">حفظ إعدادات الفاتورة</button>
           </form>
         </div>
 
@@ -1057,7 +1057,7 @@ function androidBrands(){ return (state.settings.androidBrands && state.settings
 function defaultSettings(){
   return {
     shopName:'علي فون', currency:'$', pinCode:'', androidBrands: DEFAULT_ANDROID_BRANDS.slice(),
-    invoiceTagline:'', invoicePhones:'', invoiceAddress:'', invoiceSocial:'', invoiceTiktok:'', invoiceDelivery:'', warrantyDays: 10,
+    invoiceTagline:'', invoicePhones:'07735092960', invoiceAddress:'البصرة - الطويسة - السوق الجديد قرب مشتويات ابو كرار', invoiceSocial:'_3k3a', invoiceTiktok:'alipoin', invoiceDelivery:'', warrantyDays: 10,
     lastBackup: { weekly:null, monthly:null, yearly:null },
     users: ['المستخدم 1','المستخدم 2']
   };
@@ -1254,6 +1254,8 @@ function setCurrentUser(name){
   sessionStorage.setItem('currentUserName', name);
   const el = document.getElementById('current-user-label');
   if(el) el.textContent = name;
+  const elm = document.getElementById('mobile-user-label');
+  if(elm) elm.textContent = name;
 }
 function openUserPickerModal(){
   const users = (state.settings.users && state.settings.users.length) ? state.settings.users : ['مستخدم 1','مستخدم 2'];
@@ -1283,6 +1285,8 @@ function openUserPickerModal(){
 function ensureCurrentUser(){
   const el = document.getElementById('current-user-label');
   if(el) el.textContent = currentUserName() || 'اختر اسمك';
+  const elm = document.getElementById('mobile-user-label');
+  if(elm) elm.textContent = currentUserName() || 'اختر اسمك';
   if(!currentUserName()){ openUserPickerModal(); }
 }
 
@@ -1366,10 +1370,10 @@ function buildInvoiceHTML(row){
             </div>
             <div class="inv2-v-divider"></div>
             <div class="inv2-contacts">
-              ${s.invoicePhones ? `<div class="row">${s.invoicePhones} ${icoPhone}</div>` : ''}
-              ${s.invoiceAddress ? `<div class="row">${s.invoiceAddress} ${icoLoc}</div>` : ''}
-              ${s.invoiceSocial ? `<div class="row">${s.invoiceSocial} ${icoInsta}</div>` : ''}
-              ${s.invoiceTiktok ? `<div class="row">${s.invoiceTiktok} ${icoTiktok}</div>` : ''}
+              <div class="row">${s.invoicePhones || '07735092960'} ${icoPhone}</div>
+              <div class="row">${s.invoiceAddress || 'البصرة - الطويسة - السوق الجديد قرب مشتويات ابو كرار'} ${icoLoc}</div>
+              <div class="row">${s.invoiceSocial || '_3k3a'} ${icoInsta}</div>
+              <div class="row">${s.invoiceTiktok || 'alipoin'} ${icoTiktok}</div>
             </div>
           </div>
           <div class="inv2-info-bar">
@@ -1443,7 +1447,7 @@ function buildInvoiceHTML(row){
               <div class="inv2-logo-box"><img src="${LOGO_DATA_URI}"></div>
               <h2>${s.shopName || 'علي فون'}</h2>
               <div class="sub">للاستفسار والتواصل</div>
-              <div class="phone">${s.invoicePhones || ''}</div>
+              <div class="phone">${s.invoicePhones || '07735092960'}</div>
             </div>
             <div class="inv2-w-divider"></div>
             <div class="inv2-w-right">
@@ -2316,14 +2320,6 @@ function applyShopNameToUi(){
   document.title = (state.settings.shopName || 'علي فون') + ' · نظام الإدارة';
 }
 function renderSettings(){
-  document.getElementById('set-shop-name').value = state.settings.shopName || '';
-  document.getElementById('set-invoice-tagline').value = state.settings.invoiceTagline || '';
-  document.getElementById('set-invoice-phones').value = state.settings.invoicePhones || '';
-  document.getElementById('set-invoice-address').value = state.settings.invoiceAddress || '';
-  document.getElementById('set-invoice-social').value = state.settings.invoiceSocial || '';
-  document.getElementById('set-invoice-tiktok').value = state.settings.invoiceTiktok || '';
-  document.getElementById('set-invoice-delivery').value = state.settings.invoiceDelivery || '';
-  document.getElementById('set-invoice-warranty-days').value = state.settings.warrantyDays ?? 10;
   document.getElementById('pin-status').textContent = state.settings.pinCode
     ? 'قفل التطبيق مفعل حاليا 🔒'
     : 'قفل التطبيق غير مفعل حاليا';
@@ -2398,30 +2394,6 @@ document.getElementById('brand-add-form').addEventListener('submit', e=>{
   renderBrandManageList();
   input.value = '';
   toast('تمت إضافة الشركة ✓');
-});
-document.getElementById('settings-form').addEventListener('submit', e=>{
-  e.preventDefault();
-  state.settings.shopName = document.getElementById('set-shop-name').value.trim() || 'علي فون';
-  state.settings.currency = 'د.ع';
-  logActivity('تعديل إعدادات المحل', 'اسم المحل: ' + state.settings.shopName);
-  saveState();
-  applyShopNameToUi();
-  renderDashboard();
-  toast('تم حفظ الإعدادات ✓');
-});
-document.getElementById('invoice-settings-form').addEventListener('submit', e=>{
-  e.preventDefault();
-  state.settings.invoiceTagline = document.getElementById('set-invoice-tagline').value.trim();
-  state.settings.invoicePhones = document.getElementById('set-invoice-phones').value.trim();
-  state.settings.invoiceAddress = document.getElementById('set-invoice-address').value.trim();
-  state.settings.invoiceSocial = document.getElementById('set-invoice-social').value.trim();
-  state.settings.invoiceTiktok = document.getElementById('set-invoice-tiktok').value.trim();
-  state.settings.invoiceDelivery = document.getElementById('set-invoice-delivery').value.trim();
-  const days = Number(document.getElementById('set-invoice-warranty-days').value);
-  state.settings.warrantyDays = Number.isFinite(days) && days>=0 ? days : 10;
-  logActivity('تعديل إعدادات الفاتورة', '');
-  saveState();
-  toast('تم حفظ إعدادات الفاتورة ✓');
 });
 document.getElementById('pin-form').addEventListener('submit', e=>{
   e.preventDefault();
@@ -2804,7 +2776,6 @@ function renderInvoices(filter=''){
     return matchesText && matchesMonth;
   }).sort((a,b)=> b.date.localeCompare(a.date) || b.saleId-a.saleId);
 
-  document.getElementById('nav-count-invoices').textContent = all.length;
   document.getElementById('invoices-empty').style.display = rows.length? 'none':'block';
   document.getElementById('invoices-body').innerHTML = rows.map(r=>`
     <tr>
@@ -2900,7 +2871,6 @@ function renderActivityLog(){
     return matchesText && matchesUser && matchesAction;
   });
 
-  document.getElementById('nav-count-activity').textContent = state.activity.length;
   document.getElementById('activity-empty').style.display = rows.length ? 'none' : 'block';
   document.getElementById('activity-body').innerHTML = rows.map(a=>`
     <tr>
@@ -2914,6 +2884,7 @@ document.getElementById('activity-search').addEventListener('input', renderActiv
 document.getElementById('activity-user-filter').addEventListener('change', renderActivityLog);
 document.getElementById('activity-action-filter').addEventListener('change', renderActivityLog);
 document.getElementById('current-user-switch').addEventListener('click', openUserPickerModal);
+document.getElementById('mobile-user-switch').addEventListener('click', openUserPickerModal);
 
 /* ============================================================
    أزرار مسح حقول البحث (X)
