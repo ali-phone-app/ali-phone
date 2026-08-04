@@ -2581,7 +2581,23 @@ document.getElementById('btn-export-month').addEventListener('click', ()=>{
 
 const BACKUP_LABELS = { weekly:'أسبوعية', monthly:'شهرية', yearly:'سنوية' };
 function downloadBackup(type){
-  const blob = new Blob([JSON.stringify({ state, nextId }, null, 2)], { type:'application/json' });
+  // نستخدم currentSlices() بدل state مباشرة، لأنها تضمن كل حقل موجود
+  // بقيمة افتراضية آمنة (مصفوفة فاضية بدل undefined) حتى لو صار أي ظرف
+  // خلى جزء من الحالة بالذاكرة غير مكتمل مؤقتا — هذا يمنع تكرار مشكلة
+  // "النسخة الاحتياطية طلعت ناقصة حقل" اللي صارت سابقا.
+  const slices = currentSlices();
+  const safeSnapshot = {
+    state: {
+      settings: slices.settings,
+      models: slices.models,
+      units: slices.units,
+      sales: slices.sales,
+      expenses: slices.expenses,
+      activity: slices.activity
+    },
+    nextId: slices.nextId
+  };
+  const blob = new Blob([JSON.stringify(safeSnapshot, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
