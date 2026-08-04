@@ -1082,8 +1082,21 @@ const STATE_KEYS = ['settings','models','units','sales','expenses','activity','n
 let lastKnownUpdatedAt = { settings:null, models:null, units:null, sales:null, expenses:null, activity:null, nextId:null };
 let lastSavedJSON      = { settings:null, models:null, units:null, sales:null, expenses:null, activity:null, nextId:null };
 
+/* أي جزء من state ممكن يكون ناقص (مثلا نسخة احتياطية قديمة ماكو فيها
+   activity، أو ملف مستورد ناقص حقل)، فنعطي قيمة افتراضية آمنة له دايماً
+   بدل ما نرسل undefined لقاعدة البيانات — undefined يسبب فشل عملية
+   الحفظ بالكامل (لكل الأجزاء الأخرى المرسلة بنفس الطلب) لأن قاعدة
+   البيانات ترفض القيمة الناقصة. */
 function currentSlices(){
-  return { settings: state.settings, models: state.models, units: state.units, sales: state.sales, expenses: state.expenses, activity: state.activity, nextId };
+  return {
+    settings: state.settings || defaultSettings(),
+    models: state.models || [],
+    units: state.units || [],
+    sales: state.sales || [],
+    expenses: state.expenses || [],
+    activity: state.activity || [],
+    nextId
+  };
 }
 
 async function saveState(force=false){
@@ -1094,7 +1107,7 @@ async function saveState(force=false){
     const json = JSON.stringify(slices[key]);
     if(json !== lastSavedJSON[key]) rows.push({ key, data: slices[key], updated_at: ts, __json: json });
   }
-  if(rows.length === 0){ setSyncStatus(true); return; } // ماكو شي تغيّر — ما نرسل شي
+  if(rows.length === 0){ setSyncStatus(true); return true; } // ماكو شي تغيّر — ما نرسل شي
 
   /* فحص أمان قبل الحفظ (optimistic concurrency):
      نتأكد إن آخر updated_at المخزون بالسيرفر لهذي الأجزاء لسا نفسه اللي نعرفه
@@ -1115,7 +1128,7 @@ async function saveState(force=false){
           await pullRemoteChanges();
           setSyncStatus(true);
           toast('تم تحديث البيانات من جهاز آخر بنفس اللحظة — تأكد من آخر إجراء وأعده إذا يلزم', true);
-          return;
+          return false;
         }
       }
     }catch(e){ /* إذا فشل فحص التعارض (شبكة مثلا)، نكمل الحفظ العادي بدل ما نعلّق التطبيق */ }
@@ -1126,10 +1139,12 @@ async function saveState(force=false){
     if(error) throw error;
     rows.forEach(r=>{ lastSavedJSON[r.key] = r.__json; lastKnownUpdatedAt[r.key] = ts; });
     setSyncStatus(true);
+    return true;
   }catch(e){
     console.warn('تعذر الحفظ على قاعدة البيانات', e);
     setSyncStatus(false);
-    toast('تعذر الحفظ — تحقق من اتصال الإنترنت', true);
+    toast('تعذر الحفظ — تحقق من اتصال الإنترنت (البيانات ما انحفظت!)', true);
+    return false;
   }
 }
 
@@ -2596,15 +2611,26 @@ document.getElementById('btn-import').addEventListener('change', e=>{
       const parsed = JSON.parse(reader.result);
       if(!parsed.state) throw new Error('bad file');
       confirmAction('استيراد هذا الملف سيستبدل كل البيانات الحالية. متابعة؟', async ()=>{
-        state = parsed.state;
+        // نعبّي أي حقل ناقص بالملف المستورد بقيمة افتراضية آمنة (فاضية)
+        // بدل ما نتركه undefined — undefined يفشّل عملية الحفظ بالكامل.
+        state = Object.assign(
+          { settings: defaultSettings(), models:[], units:[], sales:[], expenses:[], activity:[] },
+          parsed.state
+        );
+        state.settings = Object.assign(defaultSettings(), state.settings || {});
         nextId = parsed.nextId || nextId;
         // نفرض الحفظ (force=true) لأن المستخدم قاصد فعلاً استبدال كل شي —
         // ما نريد فحص التعارض يلغي الاستيراد بصمت لو جهاز ثاني عدّل أي شي.
-        // ننتظر (await) نتيجة الحفظ الفعلي قبل ما نقول "تم بنجاح".
-        await saveState(true);
+        // ننتظر (await) نتيجة الحفظ الفعلي، ونتأكد إنها نجحت فعلاً قبل
+        // ما نقول للمستخدم "تم بنجاح" — إذا فشلت نحذره بوضوح.
+        const ok = await saveState(true);
         applyShopNameToUi();
         renderAll(document.querySelector('.nav-btn.active').dataset.page);
-        toast('تم استيراد البيانات بنجاح ✓');
+        if(ok){
+          toast('تم استيراد البيانات بنجاح ✓');
+        } else {
+          toast('تنبيه: البيانات ظهرت بالشاشة بس ما انحفظت بقاعدة البيانات بسبب مشكلة اتصال — أعد المحاولة قبل ما تسكر الصفحة', true);
+        }
       });
     }catch(err){
       toast('ملف غير صالح', true);
