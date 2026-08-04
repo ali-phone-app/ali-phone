@@ -999,8 +999,12 @@
           <div class="page-sub" id="backup-yearly-status" style="margin-bottom:4px;"></div>
 
           <div class="divider-trace"></div>
-          <label style="margin-top:4px;">استعادة من ملف</label>
+          <label style="margin-top:4px;">استعادة من ملف (تستبدل كل شي بالكامل)</label>
           <input type="file" id="btn-import" accept="application/json">
+          <div class="divider-trace"></div>
+          <label style="margin-top:4px;">دمج نسخة احتياطية ثانية (يضيف الناقص بس، ما يحذف أو يكرر شي موجود)</label>
+          <input type="file" id="btn-merge-import" accept="application/json">
+          <div class="page-sub" id="merge-import-status" style="margin-top:6px;"></div>
           <div class="divider-trace"></div>
           <button class="btn danger block" id="btn-reset">تصفير جميع البيانات</button>
         </div>
@@ -2630,6 +2634,121 @@ document.getElementById('btn-import').addEventListener('change', e=>{
           toast('تم استيراد البيانات بنجاح ✓');
         } else {
           toast('تنبيه: البيانات ظهرت بالشاشة بس ما انحفظت بقاعدة البيانات بسبب مشكلة اتصال — أعد المحاولة قبل ما تسكر الصفحة', true);
+        }
+      });
+    }catch(err){
+      toast('ملف غير صالح', true);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ============================================================
+   دمج نسخة احتياطية ثانية (بدون حذف أي شي موجود حاليا)
+   ============================================================
+   يفيد لما يكون عندك نسختين احتياطيتين من فترتين مختلفتين وتريد
+   توحدهم بواحدة كاملة، بدل ما وحدة تستبدل الثانية بالكامل. */
+function mergeImportedState(importedState){
+  const modelKey = m => [m.brand,m.model,m.color,m.storage,m.condition].map(v=>(v||'').toString().trim().toLowerCase()).join('|');
+
+  // 1) الموديلات: نطابق حسب (البراند+الموديل+اللون+المساحة+الحالة).
+  //    إذا موجود مسبقا نربطه، وإذا جديد نضيفه بمعرف جديد.
+  //    كمان: إذا الموديل موجود مسبقا بس سعره المقترح صفر/فاضي، وبالملف
+  //    المستورد عنده سعر فعلي، نرقّع السعر الناقص بدل ما نتجاهله —
+  //    هذا يرجّع أسعار انمسحت سابقا بمشكلة كانت موجودة بالكود.
+  const modelIdMap = {};
+  const existingModelKeyToId = {};
+  state.models.forEach(m=> existingModelKeyToId[modelKey(m)] = m.id);
+  let patchedPrices = 0;
+  (importedState.models||[]).forEach(im=>{
+    const key = modelKey(im);
+    if(existingModelKeyToId[key] !== undefined){
+      const existingId = existingModelKeyToId[key];
+      modelIdMap[im.id] = existingId;
+      if(im.defaultPrice > 0){
+        const existingModel = state.models.find(m=>m.id===existingId);
+        if(existingModel && !(existingModel.defaultPrice > 0)){
+          existingModel.defaultPrice = im.defaultPrice;
+          patchedPrices++;
+        }
+      }
+    } else {
+      const newId = nextId.model++;
+      state.models.push({ ...im, id:newId });
+      existingModelKeyToId[key] = newId;
+      modelIdMap[im.id] = newId;
+    }
+  });
+  const remapModelId = id => (id in modelIdMap) ? modelIdMap[id] : id;
+
+  // 2) الأجهزة بالمخزون: نطابق حسب IMEI (فريد لكل جهاز) — إذا موجود مسبقا نتجاوزه.
+  const existingImeis = new Set(state.units.map(u=>u.imei));
+  let addedUnits=0, skippedUnits=0;
+  (importedState.units||[]).forEach(iu=>{
+    if(!iu.imei || existingImeis.has(iu.imei)){ skippedUnits++; return; }
+    state.units.push({ ...iu, id: nextId.unit++, modelId: remapModelId(iu.modelId) });
+    existingImeis.add(iu.imei);
+    addedUnits++;
+  });
+
+  // 3) المبيعات: نطابق حسب رقم الفاتورة (فريد) — إذا موجود مسبقا نتجاوزه.
+  const existingInvoices = new Set(state.sales.map(s=>s.invoiceNumber).filter(Boolean));
+  let addedSales=0, skippedSales=0;
+  (importedState.sales||[]).forEach(is=>{
+    if(is.invoiceNumber && existingInvoices.has(is.invoiceNumber)){ skippedSales++; return; }
+    const newSale = { ...is, id: nextId.sale++, items:(is.items||[]).map(it=>({ ...it, modelId: remapModelId(it.modelId) })) };
+    state.sales.push(newSale);
+    if(is.invoiceNumber) existingInvoices.add(is.invoiceNumber);
+    addedSales++;
+  });
+
+  // 4) المصاريف: نطابق حسب (التاريخ+المبلغ+الملاحظة) لتفادي التكرار.
+  const expKey = e => [e.date,e.amount,e.note].map(v=>(v||'').toString()).join('|');
+  const existingExpKeys = new Set(state.expenses.map(expKey));
+  let addedExpenses=0;
+  (importedState.expenses||[]).forEach(ie=>{
+    const key = expKey(ie);
+    if(existingExpKeys.has(key)) return;
+    state.expenses.push({ ...ie, id: nextId.expense++ });
+    existingExpKeys.add(key);
+    addedExpenses++;
+  });
+
+  // 5) سجل النشاطات: نضيفهم بس (مو حرج لو تكرر شي بسيط هنا).
+  (importedState.activity||[]).forEach(ia=>{
+    state.activity.push({ ...ia, id: nextId.activity++ });
+  });
+  state.activity.sort((a,b)=> new Date(b.ts) - new Date(a.ts));
+  if(state.activity.length > 500) state.activity.length = 500;
+
+  return { addedUnits, skippedUnits, addedSales, skippedSales, addedExpenses, patchedPrices };
+}
+
+document.getElementById('btn-merge-import').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed.state) throw new Error('bad file');
+      confirmAction('راح نضيف من هذا الملف بس الأجهزة/المبيعات الناقصة عندك حاليا (بدون حذف أو تكرار أي شي موجود). متابعة؟', async ()=>{
+        const importedState = Object.assign(
+          { settings: defaultSettings(), models:[], units:[], sales:[], expenses:[], activity:[] },
+          parsed.state
+        );
+        const result = mergeImportedState(importedState);
+        const ok = await saveState(true);
+        applyShopNameToUi();
+        renderAll(document.querySelector('.nav-btn.active').dataset.page);
+        const statusEl = document.getElementById('merge-import-status');
+        const summary = `أُضيف ${result.addedUnits} جهاز، ${result.addedSales} عملية بيع، ${result.addedExpenses} مصروف، وترقّع سعر البيع المقترح لـ${result.patchedPrices} موديل · تجاوزنا ${result.skippedUnits} جهاز و${result.skippedSales} عملية بيع موجودين مسبقا`;
+        if(statusEl) statusEl.textContent = summary;
+        if(ok){
+          toast('تم الدمج بنجاح ✓ — ' + summary);
+        } else {
+          toast('تنبيه: تم الدمج بالشاشة بس ما انحفظ بقاعدة البيانات بسبب مشكلة اتصال — أعد المحاولة', true);
         }
       });
     }catch(err){
